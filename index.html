@@ -1,56 +1,44 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <title>US Citizenship Quiz</title>
-
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#111111">
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
-      background: #f6f7fb;
-      margin: 0;
-      padding: 20px;
-    }
-    .card {
-      background: #fff;
-      max-width: 420px;
-      margin: auto;
-      padding: 20px;
-      border-radius: 16px;
-    }
-    button {
-      width: 100%;
-      padding: 14px;
-      font-size: 16px;
-      border-radius: 12px;
-      background: #111;
-      color: #fff;
-      border: none;
-    }
-  </style>
+  <title>US Civics Quiz</title>
+  <link rel="stylesheet" href="./style.css" />
 </head>
 
 <body>
-  <div class="card">
-    <h2>US Citizenship Quiz</h2>
-    <p>Practice for the US civics test.</p>
+  <div class="app">
+    <header class="header">
+      <h1>US Civics Quiz</h1>
+      <p class="subtitle">Practice 100 official civics questions (sample set)</p>
+    </header>
 
-    <button onclick="alert('Quiz will start here')">
-      Start Practice
-    </button>
+    <main class="card">
+      <div class="topbar">
+        <div id="progressText" class="muted">Question 1 of 100</div>
+        <div id="scoreText" class="muted">Score: 0</div>
+      </div>
+
+      <h2 id="question" class="question">Loading...</h2>
+
+      <div id="choices" class="choices"></div>
+
+      <div class="controls">
+        <button id="prevBtn" class="btn secondary" disabled>Prev</button>
+        <button id="nextBtn" class="btn secondary" disabled>Next</button>
+        <button id="restartBtn" class="btn danger" style="display:none;">Restart</button>
+      </div>
+
+      <div id="result" class="result" style="display:none;"></div>
+    </main>
+
+    <footer class="footer muted">
+      Tip: Click an answer to lock it in. Then use Next.
+    </footer>
   </div>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
-    }
-  </script>
+  <script src="./questions.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
