@@ -1,44 +1,314 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>US Civics Quiz</title>
-  <link rel="stylesheet" href="./style.css" />
+  <title>US Citizenship Quiz</title>
+
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#111111">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <style>
+    :root{
+      --bg:#f6f7fb;--card:#fff;--text:#111;--muted:#666;--border:#e5e7eb;
+      --ok:#16a34a;--bad:#dc2626;
+      --r:16px;--rs:12px;
+    }
+    body{margin:0;padding:18px;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text);}
+    .card{max-width:420px;margin:0 auto;background:var(--card);border-radius:var(--r);padding:16px;box-shadow:0 6px 20px rgba(0,0,0,.05)}
+    h1{font-size:20px;margin:0 0 6px}
+    .muted{color:var(--muted);font-size:13px}
+    .row{display:flex;gap:10px}
+    button{width:100%;padding:12px;border-radius:var(--rs);border:1px solid var(--border);background:#fff;font-size:15px}
+    button.primary{background:#111;color:#fff;border-color:#111}
+    .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#f1f3f7;font-size:12px}
+    .qzh{font-size:17px;font-weight:700;margin-top:14px}
+    .qen{font-size:14px;color:var(--muted);margin-top:4px}
+    .opt{margin-top:10px;text-align:left}
+    .opt.selected{border-color:#111;background:#f0f0f0}
+    .opt.correct{border-color:var(--ok);background:#eaf7ee}
+    .opt.wrong{border-color:var(--bad);background:#fdecec}
+    .footer{display:flex;gap:10px;margin-top:12px}
+    .footer button{flex:1}
+    .hide{display:none}
+    .review-item{border:1px solid var(--border);border-radius:var(--rs);padding:12px;margin-top:10px;background:#fff}
+  </style>
 </head>
 
 <body>
-  <div class="app">
-    <header class="header">
-      <h1>US Civics Quiz</h1>
-      <p class="subtitle">Practice 100 official civics questions (sample set)</p>
-    </header>
+  <div class="card">
+    <h1>US Citizenship Quiz</h1>
+    <div class="muted">中英对照 · 随机20题 · 自动评分（≥12/20 通过）</div>
 
-    <main class="card">
-      <div class="topbar">
-        <div id="progressText" class="muted">Question 1 of 100</div>
-        <div id="scoreText" class="muted">Score: 0</div>
+    <div style="height:10px"></div>
+
+    <!-- Status -->
+    <div class="row" style="align-items:center;justify-content:space-between;">
+      <span class="pill" id="modePill">FREE</span>
+      <span class="pill" id="progressPill">0/20</span>
+      <span class="pill" id="scorePill">Score 0</span>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <!-- Screens -->
+    <div id="screenHome">
+      <button class="primary" id="startBtn">Start Practice / 开始练习</button>
+      <div style="height:10px"></div>
+      <button id="upgradeBtn">Upgrade to Pro / 升级专业版</button>
+      <div class="muted" style="margin-top:10px">
+        Pro：无限练习 + 错题回顾 +（后续可加）完整题库学习模式
+      </div>
+    </div>
+
+    <div id="screenQuiz" class="hide">
+      <div class="qzh" id="qZh"></div>
+      <div class="qen" id="qEn"></div>
+      <div id="options"></div>
+
+      <div class="footer">
+        <button id="prevBtn">Prev / 上一题</button>
+        <button id="nextBtn">Next / 下一题</button>
       </div>
 
-      <h2 id="question" class="question">Loading...</h2>
+      <div style="height:10px"></div>
+      <button class="primary" id="submitBtn">Submit / 提交评分</button>
+    </div>
 
-      <div id="choices" class="choices"></div>
+    <div id="screenResult" class="hide">
+      <div id="resultTitle" style="font-size:18px;font-weight:800;"></div>
+      <div class="muted" id="resultDetail" style="margin-top:6px"></div>
 
-      <div class="controls">
-        <button id="prevBtn" class="btn secondary" disabled>Prev</button>
-        <button id="nextBtn" class="btn secondary" disabled>Next</button>
-        <button id="restartBtn" class="btn danger" style="display:none;">Restart</button>
-      </div>
+      <div style="height:12px"></div>
+      <button class="primary" id="againBtn">Practice Again / 再来一套随机20题</button>
+      <div style="height:10px"></div>
+      <button id="reviewBtn">Review Mistakes / 查看错题</button>
+      <div style="height:10px"></div>
+      <button id="homeBtn">Back Home / 返回首页</button>
+    </div>
 
-      <div id="result" class="result" style="display:none;"></div>
-    </main>
+    <div id="screenReview" class="hide">
+      <h2 style="margin:0 0 6px;font-size:18px">错题回顾 <span class="muted">/ Review</span></h2>
+      <div class="muted" id="reviewCount"></div>
+      <div id="reviewList"></div>
 
-    <footer class="footer muted">
-      Tip: Click an answer to lock it in. Then use Next.
-    </footer>
+      <div style="height:12px"></div>
+      <button id="backResultBtn">Back / 返回成绩页</button>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="muted" style="font-size:12px;line-height:1.5">
+      本应用为学习工具，非 USCIS 官方应用。题库基于公开资料，答案可能随时间变化。
+    </div>
   </div>
 
+  <!-- Load question bank -->
   <script src="./questions.js"></script>
-  <script src="./app.js"></script>
+
+  <script>
+    // --- PWA service worker ---
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js");
+    }
+
+    // --- Pro unlock (simple) ---
+    function isPro(){ return localStorage.getItem("isPro")==="true"; }
+    function unlockPro(){ localStorage.setItem("isPro","true"); renderMode(); }
+
+    // Gumroad redirect unlock: ?success=true
+    (function(){
+      const p = new URLSearchParams(location.search);
+      if (p.get("success")==="true") {
+        unlockPro();
+        alert("🎉 Pro unlocked / 已解锁专业版");
+        history.replaceState({}, document.title, location.pathname);
+      }
+    })();
+
+    // --- UI elements ---
+    const modePill = document.getElementById("modePill");
+    const progressPill = document.getElementById("progressPill");
+    const scorePill = document.getElementById("scorePill");
+
+    const screenHome = document.getElementById("screenHome");
+    const screenQuiz = document.getElementById("screenQuiz");
+    const screenResult = document.getElementById("screenResult");
+    const screenReview = document.getElementById("screenReview");
+
+    const startBtn = document.getElementById("startBtn");
+    const upgradeBtn = document.getElementById("upgradeBtn");
+
+    const qZh = document.getElementById("qZh");
+    const qEn = document.getElementById("qEn");
+    const optionsDiv = document.getElementById("options");
+
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const submitBtn = document.getElementById("submitBtn");
+
+    const resultTitle = document.getElementById("resultTitle");
+    const resultDetail = document.getElementById("resultDetail");
+    const againBtn = document.getElementById("againBtn");
+    const reviewBtn = document.getElementById("reviewBtn");
+    const homeBtn = document.getElementById("homeBtn");
+
+    const reviewCount = document.getElementById("reviewCount");
+    const reviewList = document.getElementById("reviewList");
+    const backResultBtn = document.getElementById("backResultBtn");
+
+    // --- App state ---
+    let quiz = [];                // 20 picked questions
+    let idx = 0;                  // current index
+    let selected = new Map();     // id -> optionIndex
+
+    function renderMode(){
+      modePill.textContent = isPro() ? "PRO" : "FREE";
+    }
+
+    function showScreen(name){
+      screenHome.classList.add("hide");
+      screenQuiz.classList.add("hide");
+      screenResult.classList.add("hide");
+      screenReview.classList.add("hide");
+      if (name==="home") screenHome.classList.remove("hide");
+      if (name==="quiz") screenQuiz.classList.remove("hide");
+      if (name==="result") screenResult.classList.remove("hide");
+      if (name==="review") screenReview.classList.remove("hide");
+    }
+
+    function shuffle(arr){
+      const a = arr.slice();
+      for (let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i],a[j]]=[a[j],a[i]];
+      }
+      return a;
+    }
+
+    function pick20(){
+      if (!window.QUESTIONS || !Array.isArray(window.QUESTIONS) || window.QUESTIONS.length < 1) {
+        alert("Question bank not loaded. questions.js 没加载成功。");
+        return [];
+      }
+      const pool = shuffle(window.QUESTIONS);
+      const take = Math.min(20, pool.length);
+      return pool.slice(0, take);
+    }
+
+    function currentScore(){
+      let s = 0;
+      quiz.forEach(q=>{
+        const a = selected.get(q.id);
+        if (a === q.answerIndex) s++;
+      });
+      return s;
+    }
+
+    function renderTop(){
+      progressPill.textContent = `${idx+1}/${quiz.length}`;
+      scorePill.textContent = `Score ${currentScore()}`;
+    }
+
+    function renderQuestion(){
+      const q = quiz[idx];
+      if (!q) return;
+
+      qZh.textContent = q.q.zh;
+      qEn.textContent = q.q.en;
+
+      optionsDiv.innerHTML = "";
+      const chosen = selected.get(q.id);
+
+      q.options.forEach((opt, oi)=>{
+        const b = document.createElement("button");
+        b.className = "opt";
+        if (chosen === oi) b.classList.add("selected");
+
+        b.innerHTML = `<div style="font-weight:700">${opt.zh}</div><div class="muted">${opt.en}</div>`;
+        b.onclick = ()=>{
+          selected.set(q.id, oi);
+          renderQuestion();
+          renderTop();
+        };
+        optionsDiv.appendChild(b);
+      });
+
+      prevBtn.disabled = idx === 0;
+      nextBtn.disabled = idx === quiz.length - 1;
+      renderTop();
+    }
+
+    function startQuiz(){
+      quiz = pick20();
+      if (quiz.length === 0) return;
+      idx = 0;
+      selected = new Map();
+      showScreen("quiz");
+      renderQuestion();
+    }
+
+    function submitQuiz(){
+      const score = currentScore();
+      const pass = score >= 12;
+
+      resultTitle.textContent = pass ? `✅ PASS` : `❌ FAIL`;
+      resultTitle.style.color = pass ? "var(--ok)" : "var(--bad)";
+      resultDetail.textContent = `Score: ${score}/${quiz.length}  (Pass ≥ 12/20)`;
+
+      showScreen("result");
+    }
+
+    function renderReview(){
+      const mistakes = quiz.filter(q => selected.get(q.id) !== q.answerIndex);
+      reviewCount.textContent = `错题 ${mistakes.length} 题 / ${mistakes.length} mistakes`;
+
+      reviewList.innerHTML = "";
+      mistakes.forEach(q=>{
+        const sel = selected.get(q.id);
+        const selOpt = (sel==null) ? {zh:"（未作答）", en:"(No answer)"} : q.options[sel];
+        const ansOpt = q.options[q.answerIndex];
+
+        const div = document.createElement("div");
+        div.className = "review-item";
+        div.innerHTML = `
+          <div style="font-weight:800">${q.q.zh}</div>
+          <div class="muted">${q.q.en}</div>
+          <div style="margin-top:8px"><span style="color:var(--bad);font-weight:800">你的答案：</span>${selOpt.zh} / ${selOpt.en}</div>
+          <div><span style="color:var(--ok);font-weight:800">正确答案：</span>${ansOpt.zh} / ${ansOpt.en}</div>
+        `;
+        reviewList.appendChild(div);
+      });
+    }
+
+    // --- Events ---
+    startBtn.onclick = startQuiz;
+
+    // Gumroad product link
+    upgradeBtn.onclick = ()=>{
+      if (isPro()) {
+        alert("You are already PRO / 你已经是专业版");
+        return;
+      }
+      location.href = "https://shijai.gumroad.com/l/ylyva";
+    };
+
+    prevBtn.onclick = ()=>{ if (idx>0){ idx--; renderQuestion(); } };
+    nextBtn.onclick = ()=>{ if (idx<quiz.length-1){ idx++; renderQuestion(); } };
+
+    submitBtn.onclick = submitQuiz;
+
+    againBtn.onclick = ()=> startQuiz();
+    reviewBtn.onclick = ()=>{ renderReview(); showScreen("review"); };
+    homeBtn.onclick = ()=> showScreen("home");
+    backResultBtn.onclick = ()=> showScreen("result");
+
+    // --- init ---
+    renderMode();
+    showScreen("home");
+    progressPill.textContent = `0/20`;
+    scorePill.textContent = `Score 0`;
+  </script>
 </body>
 </html>
