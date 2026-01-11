@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>US Citizenship Quiz</title>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#111111">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      background: #f6f7fb;
+      margin: 0;
+      padding: 20px;
+    }
+    .card {
+      background: #fff;
+      max-width: 420px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      border-radius: 12px;
+      background: #111;
+      color: #fff;
+      border: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h2>US Citizenship Quiz</h2>
+    <p>Practice for the US civics test.</p>
+
+    <button onclick="alert('Quiz will start here')">
+      Start Practice
+    </button>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+</body>
+</html>
