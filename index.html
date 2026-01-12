@@ -312,3 +312,17 @@
   </script>
 </body>
 </html>
+<script>
+  const params = new URLSearchParams(location.search);
+  if (params.get("pro") === "1") {
+    localStorage.setItem("ucq_pro", "1");
+  }
+  const isPro = localStorage.getItem("ucq_pro") === "1";
+  // 假设你的“FREE”标记元素添加了 id="planTag"，升级按钮添加 id="upgradeBtn"
+  const tag = document.getElementById("planTag");
+  const btn = document.getElementById("upgradeBtn");
+  if (isPro) {
+    if (tag) tag.textContent = "PRO";
+    if (btn) btn.style.display = "none";
+  }
+</script>
