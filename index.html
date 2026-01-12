@@ -1,201 +1,116 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>US Citizenship Quiz</title>
-<style>
-body {
-  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
-  background:#f6f7fb;
-  margin:0; padding:20px;
-}
-.card {
-  max-width:720px;
-  margin:auto;
-  background:#fff;
-  padding:24px;
-  border-radius:14px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.08);
-}
-h1 {margin-top:0;}
-button {
-  width:100%;
-  padding:12px;
-  font-size:16px;
-  border:none;
-  border-radius:8px;
-  background:#0066cc;
-  color:#fff;
-  cursor:pointer;
-  margin-top:8px;
-}
-button.small {width:auto; padding:8px 14px; font-size:14px;}
-button.secondary {background:#555;}
-.opt {
-  width:100%;
-  text-align:left;
-  background:#f4f4f4;
-  border-radius:10px;
-  padding:10px 14px;
-  margin-top:10px;
-  border:1px solid transparent;
-}
-.opt:hover {background:#e9f2ff;}
-.opt.correct {background:#d4f8d4; border-color:#4caf50;}
-.opt.wrong {background:#ffd4d4; border-color:#f44336;}
-.opt.disabled {pointer-events:none; opacity:0.7;}
-.row {display:flex; flex-wrap:wrap; gap:8px;}
-.chip {
-  background:#e0e0e0;
-  border-radius:20px;
-  padding:4px 10px;
-  font-size:13px;
-}
-.chip strong {color:#111;}
-.split {margin-top:16px; border-bottom:1px solid #ddd;}
-.sub {font-size:14px; color:#444; margin-top:-6px; margin-bottom:10px;}
-</style>
-</head>
-<body>
-
-<div class="card">
-  <h1>US Citizenship Quiz</h1>
-  <div class="sub">官方128题（2025版）｜英中对照选择题版</div>
-
-  <div class="row">
-    <div class="chip">Mode: <strong id="modeChip">Practice</strong></div>
-    <div class="chip">Progress: <strong id="progress">0/0</strong></div>
-    <div class="chip">Score: <strong id="score">0</strong></div>
-    <div class="chip">Wrong saved: <strong id="wrongCount">0</strong></div>
-  </div>
-
-  <div class="split"></div>
-
-  <div class="row" style="margin-top:12px;">
-    <button class="small" onclick="startPractice(20)">🧩 Practice 20</button>
-    <button class="small" onclick="startFull()">📘 Full 128</button>
-    <button class="small" onclick="reviewWrong()">❌ Wrong Review</button>
-    <button class="small secondary" onclick="clearWrong()">🗑 Clear Wrong</button>
-  </div>
-
-  <div class="split"></div>
-
-  <div id="quizArea" style="margin-top:16px;"></div>
-
-  <div class="split"></div>
-
-  <div class="row" style="margin-top:12px;">
-    <button id="nextBtn" onclick="nextQuestion()">Next / 下一题</button>
-  </div>
-</div>
-
-<script src="questions.js"></script>
-<script>
-let questions = [];
-let current = 0;
-let score = 0;
-let mode = 'practice';
-let wrongList = JSON.parse(localStorage.getItem('wrongList') || '[]');
-let currentSet = [];
-
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-
-function randomOptions(q){
-  const correct = q.answers_en[0];
-  const options = [correct];
-  while(options.length<4){
-    const r = QUESTIONS[Math.floor(Math.random()*QUESTIONS.length)];
-    const a = r.answers_en[0];
-    if(a && !options.includes(a)) options.push(a);
-  }
-  return shuffle(options);
-}
-
-function startPractice(n=20){
-  mode='practice';
-  currentSet = shuffle([...QUESTIONS]).slice(0,n);
-  current=0; score=0;
-  document.getElementById('modeChip').innerText='Practice '+n;
-  showQuestion();
-}
-
-function startFull(){
-  mode='full';
-  currentSet = shuffle([...QUESTIONS]);
-  current=0; score=0;
-  document.getElementById('modeChip').innerText='Full 128';
-  showQuestion();
-}
-
-function reviewWrong(){
-  if(wrongList.length===0){alert("暂无错题。");return;}
-  mode='wrong';
-  currentSet = QUESTIONS.filter(q=>wrongList.includes(q.id));
-  current=0; score=0;
-  document.getElementById('modeChip').innerText='Wrong Review';
-  showQuestion();
-}
-
-function clearWrong(){
-  if(confirm("确定要清除错题记录吗？")){
-    wrongList=[];
-    localStorage.setItem('wrongList','[]');
-    updateInfo();
-    alert("已清除错题记录。");
-  }
-}
-
-function showQuestion(){
-  const q = currentSet[current];
-  if(!q){alert("完成！ 分数："+score+"/"+currentSet.length);return;}
-  updateInfo();
-  const opts = randomOptions(q);
-  const area = document.getElementById('quizArea');
-  area.innerHTML = `
-    <div style="margin-bottom:12px;font-weight:bold;">${current+1}. ${q.en}</div>
-    <div style="color:#555;margin-bottom:8px;">${q.zh}</div>
-    ${opts.map(o=>`<div class='opt' onclick='selectOption(this, "${escapeHTML(o)}", "${escapeHTML(q.answers_en[0])}", ${q.id})'>${o}</div>`).join('')}
-  `;
-}
-
-function selectOption(el, chosen, correct, id){
-  const opts=document.querySelectorAll('.opt');
-  opts.forEach(o=>o.classList.add('disabled'));
-  if(chosen===correct){
-    el.classList.add('correct');
-    score++;
-  }else{
-    el.classList.add('wrong');
-    if(!wrongList.includes(id)){
-      wrongList.push(id);
-      localStorage.setItem('wrongList',JSON.stringify(wrongList));
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>US Citizenship Quiz (Voice)</title>
+  <style>
+    :root{
+      --bg:#0b1220;--card:#111a2e;--text:#eef2ff;--muted:#aab3cf;
+      --border:rgba(255,255,255,.12);--good:#2bd576;--bad:#ff5a7a;
+      --btn:#1b2a4a;--btn2:#17233c;
     }
-  }
-  updateInfo();
-}
+    *{box-sizing:border-box}
+    body{
+      margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:radial-gradient(1200px 700px at 20% 10%,#1b2a55 0%,var(--bg) 55%);
+      color:var(--text);
+    }
+    .app{max-width:900px;margin:0 auto;padding:28px 16px 40px}
+    .header h1{margin:0 0 6px;font-size:32px}
+    .muted{color:var(--muted);font-size:14px}
+    .card{
+      margin-top:18px;background:rgba(17,26,46,.92);
+      border:1px solid var(--border);border-radius:18px;
+      padding:18px;box-shadow:0 18px 60px rgba(0,0,0,.35);
+    }
+    .topbar{display:flex;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .question{margin:12px 0 12px;font-size:22px;line-height:1.25}
+    .choices{display:grid;gap:10px;margin:10px 0 14px}
+    .choice{
+      width:100%;text-align:left;padding:12px 12px;
+      background:rgba(27,42,74,.55);
+      border:1px solid var(--border);border-radius:14px;
+      color:var(--text);cursor:pointer;
+    }
+    .choice:hover{background:rgba(27,42,74,.8)}
+    .choice:disabled{cursor:default;opacity:.92}
+    .choice.correct{border-color:rgba(43,213,118,.7);background:rgba(43,213,118,.15)}
+    .choice.wrong{border-color:rgba(255,90,122,.7);background:rgba(255,90,122,.14)}
+    .controls{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
+    .btn{
+      padding:10px 14px;border-radius:12px;border:1px solid var(--border);
+      background:var(--btn);color:var(--text);cursor:pointer;
+    }
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .btn.secondary{background:var(--btn2)}
+    .btn.danger{background:rgba(255,90,122,.2);border-color:rgba(255,90,122,.45)}
+    .result{
+      margin-top:14px;padding:12px;border-radius:14px;border:1px solid var(--border);
+      background:rgba(255,255,255,.04);line-height:1.5
+    }
 
-function nextQuestion(){
-  current++;
-  if(current>=currentSet.length){
-    alert("测验结束 ✅ 得分："+score+"/"+currentSet.length);
-  }else{
-    showQuestion();
-  }
-}
+    .choiceRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .choiceText{flex:1}
+    .miniSpeak{
+      flex:0 0 auto;border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.06);
+      color:inherit;border-radius:10px;padding:6px 10px;cursor:pointer;
+    }
+    .miniSpeak:hover{background:rgba(255,255,255,.10)}
+  </style>
+</head>
 
-function updateInfo(){
-  document.getElementById('progress').innerText=`${current+1}/${currentSet.length}`;
-  document.getElementById('score').innerText=score;
-  document.getElementById('wrongCount').innerText=wrongList.length;
-}
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>US Citizenship Quiz</h1>
+      <p class="muted">128 Questions • English voice practice</p>
+    </header>
 
-function escapeHTML(str){
-  return str.replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
+    <main class="card">
+      <div class="topbar">
+        <div id="progressText" class="muted">Question 1 of 128</div>
+        <div id="scoreText" class="muted">Score: 0</div>
+      </div>
 
-// 初始化
-updateInfo();
-</script>
+      <h2 id="question" class="question">Loading…</h2>
+      <div id="choices" class="choices"></div>
+
+      <div class="controls">
+        <select id="rateSelect" class="btn secondary" title="Speech rate">
+          <option value="0.8">Rate 0.8</option>
+          <option value="1" selected>Rate 1.0</option>
+          <option value="1.1">Rate 1.1</option>
+          <option value="1.2">Rate 1.2</option>
+        </select>
+
+        <button id="speakBtn" class="btn">🔊 Speak</button>
+        <button id="stopSpeakBtn" class="btn secondary">⏹ Stop</button>
+
+        <button id="prevBtn" class="btn secondary" disabled>Prev</button>
+        <button id="nextBtn" class="btn secondary" disabled>Next</button>
+        <button id="restartBtn" class="btn danger" style="display:none;">Restart</button>
+      </div>
+
+      <div id="result" class="result" style="display:none;"></div>
+    </main>
+
+    <p class="muted" style="text-align:center;margin-top:14px;">
+      If updates don’t show: force refresh (Ctrl+F5) or unregister Service Worker.
+    </p>
+  </div>
+
+  <script src="./questions.js"></script>
+  <script src="./app.js"></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(()=>{});
+      });
+    }
+  </script>
 </body>
 </html>
+
