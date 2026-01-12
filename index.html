@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>US Citizenship Quiz</title>
+  <title>US Citizenship Study</title>
 
   <style>
     :root{
@@ -21,7 +21,6 @@
     .header{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;flex-wrap:wrap}
     .header h1{margin:0 0 6px;font-size:30px}
     .muted{color:var(--muted);font-size:14px}
-    .pillrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
     .btn{
       padding:10px 14px;border-radius:12px;border:1px solid var(--border);
       background:var(--btn);color:var(--text);cursor:pointer;
@@ -30,31 +29,6 @@
     .btn.secondary{background:var(--btn2)}
     .btn.danger{background: rgba(255,90,122,.2); border-color: rgba(255,90,122,.45)}
     .btn:disabled{opacity:.45;cursor:not-allowed}
-    .card{
-      margin-top:16px;background: rgba(17, 26, 46, .92);
-      border:1px solid var(--border); border-radius:18px;
-      padding:18px; box-shadow:0 18px 60px rgba(0,0,0,.35);
-    }
-    .topbar{display:flex;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap}
-    .question{margin:12px 0 10px;font-size:22px;line-height:1.25}
-    .question .zh{margin-top:6px}
-    .choices{display:grid;gap:10px;margin:10px 0 12px}
-    .choice{
-      width:100%; text-align:left; padding:12px 12px;
-      background: rgba(27, 42, 74, .55);
-      border:1px solid var(--border); border-radius:14px;
-      color:var(--text); cursor:pointer;
-    }
-    .choice:hover{background: rgba(27, 42, 74, .8)}
-    .choice:disabled{cursor:default;opacity:.92}
-    .choice.correct{border-color: rgba(43, 213, 118, .7); background: rgba(43, 213, 118, .15)}
-    .choice.wrong{border-color: rgba(255, 90, 122, .7); background: rgba(255, 90, 122, .14)}
-    .controls{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
-    .result{
-      margin-top:12px;padding:12px;border-radius:14px;border:1px solid var(--border);
-      background: rgba(255,255,255,.04);line-height:1.55
-    }
-    .mini{font-size:13px}
     .tag{
       display:inline-block;
       padding:4px 10px;
@@ -65,7 +39,30 @@
       color: var(--muted);
     }
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .spacer{flex:1}
+    .card{
+      margin-top:16px;background: rgba(17, 26, 46, .92);
+      border:1px solid var(--border); border-radius:18px;
+      padding:18px; box-shadow:0 18px 60px rgba(0,0,0,.35);
+    }
+    .topbar{display:flex;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+    .q{
+      margin:12px 0 10px;
+      font-size:22px;
+      line-height:1.3;
+    }
+    .q .zh{margin-top:6px}
+    .panel{
+      margin-top:12px;
+      padding:12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      line-height:1.55;
+    }
+    .controls{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+    ol{margin:8px 0 0; padding-left:18px}
+    li{margin:6px 0}
+    .mini{font-size:13px}
   </style>
 </head>
 
@@ -73,14 +70,18 @@
   <div class="app">
     <header class="header">
       <div>
-        <h1>US Citizenship Quiz</h1>
-        <div class="muted">选择题模式（自动从 USCIS 问答库生成选项） • 支持 英文+中文 • 随机20题 / 全部128题 / 错题本</div>
+        <h1>US Citizenship Study</h1>
+        <div class="muted">学习模式：问题 + 答案（中英文）• Full 128 / Random 20 / 65/20 / 错题本</div>
       </div>
-      <div class="pillrow">
+
+      <div class="row">
         <span id="modeTag" class="tag">Mode: Full 128</span>
+        <span id="countTag" class="tag">Count: 0</span>
         <span id="wrongTag" class="tag">Wrong: 0</span>
+
         <button id="btnFull" class="btn secondary">Full 128</button>
         <button id="btnRandom20" class="btn secondary">Random 20</button>
+        <button id="btnStar" class="btn secondary">65/20 ★</button>
         <button id="btnWrongOnly" class="btn secondary">Wrong Only</button>
         <button id="btnClearWrong" class="btn danger">Clear Wrong</button>
       </div>
@@ -89,44 +90,45 @@
     <main class="card">
       <div class="topbar">
         <div class="row">
-          <div id="progressText" class="muted">Question 1</div>
+          <div id="progressText" class="muted">Question</div>
           <span id="starTag" class="tag" style="display:none;">★ 65/20</span>
         </div>
         <div class="row">
-          <div id="scoreText" class="muted">Score: 0</div>
+          <button id="toggleAnswerBtn" class="btn">Show Answer</button>
         </div>
       </div>
 
-      <div id="question" class="question">Loading…</div>
-      <div id="choices" class="choices"></div>
+      <div id="question" class="q">Loading…</div>
+
+      <div id="answerPanel" class="panel" style="display:none;"></div>
 
       <div class="controls">
-        <button id="prevBtn" class="btn secondary" disabled>Prev</button>
-        <button id="nextBtn" class="btn secondary" disabled>Next</button>
-        <button id="restartBtn" class="btn danger" style="display:none;">Restart</button>
-      </div>
+        <button id="markKnowBtn" class="btn">记住 ✅</button>
+        <button id="markWrongBtn" class="btn secondary">没记住（加入错题）❌</button>
 
-      <div id="result" class="result" style="display:none;"></div>
+        <button id="prevBtn" class="btn secondary">Prev</button>
+        <button id="nextBtn" class="btn secondary">Next</button>
+        <button id="restartBtn" class="btn danger">Restart</button>
+      </div>
     </main>
 
     <p class="muted mini" style="text-align:center;margin-top:12px;">
-      如果你改完还是不更新：iPad Safari 需要“设置 → Safari → 清除历史记录与网站数据”。
+      如果你改完还不更新：iPad Safari 可用“设置 → Safari → 清除历史记录与网站数据”。
     </p>
   </div>
 
-  <!-- 保持你现在的 questions.js（128题那份） -->
-  <!-- 先强制卸载旧的 Service Worker（如果以前装过，会一直用旧缓存） -->
-<script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations()
-      .then(regs => Promise.all(regs.map(r => r.unregister())))
-      .catch(()=>{});
-  }
-</script>
+  <!-- 强制卸载旧 Service Worker（避免老缓存） -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations()
+        .then(regs => Promise.all(regs.map(r => r.unregister())))
+        .catch(()=>{});
+    }
+  </script>
 
-<!-- 加版本号，强制浏览器拉最新文件（不走旧缓存） -->
-<script src="./questions.js?v=20260112a"></script>
-<script src="./app.js?v=20260112a"></script>
+  <!-- 加版本号，强制拉新文件 -->
+  <script src="./questions.js?v=study20260112a"></script>
+  <script src="./app.js?v=study20260112a"></script>
 </body>
 </html>
 
