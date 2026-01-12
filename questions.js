@@ -144,4 +144,4 @@ const QUESTIONS = [
 // Make available both in browser and Node
 if (typeof window !== "undefined") window.QUESTIONS = QUESTIONS;
 if (typeof module !== "undefined" && module.exports) module.exports = QUESTIONS;
-window.QUESTIONS = QUESTIONS;  
+  
