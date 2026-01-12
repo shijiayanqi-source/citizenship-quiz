@@ -23,7 +23,7 @@ const prevBtn = $("prevBtn");
 const nextBtn = $("nextBtn");
 const restartBtn = $("restartBtn");
 
-/** --------- Load bank (your questions.js stays as-is) --------- */
+/** --------- Load bank (keep your questions.js as-is) --------- */
 const RAW =
   (Array.isArray(window.QUESTIONS) && window.QUESTIONS) ||
   (typeof QUESTIONS !== "undefined" && Array.isArray(QUESTIONS) ? QUESTIONS : []);
@@ -44,7 +44,6 @@ const BANK = RAW.map(norm).filter(x => x.en && x.answers_en.length);
 
 /** --------- Wrong set persisted --------- */
 const LS_KEY_WRONG = "uscis_wrong_ids_v2";
-
 function loadWrongSet() {
   try {
     const arr = JSON.parse(localStorage.getItem(LS_KEY_WRONG) || "[]");
@@ -66,18 +65,6 @@ let activeIds = [];
 let pos = 0;
 let revealedByPos = {}; // {pos: true/false}
 
-function setHeaderTags() {
-  const label =
-    mode === MODE.FULL ? "Mode: Full 128" :
-    mode === MODE.RAND20 ? "Mode: Random 20" :
-    mode === MODE.STAR ? "Mode: 65/20 ★" :
-    "Mode: Wrong Only";
-
-  modeTag.textContent = label;
-  countTag.textContent = `Count: ${activeIds.length}`;
-  wrongTag.textContent = `Wrong: ${wrongSet.size}`;
-}
-
 function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -85,6 +72,18 @@ function shuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+function setHeaderTags() {
+  const label =
+    mode === MODE.FULL ? "Mode: Full 128" :
+    mode === MODE.RAND20 ? "Mode: Random 20" :
+    mode === MODE.STAR ? "Mode: 65/20 ★" :
+    "Mode: Wrong Only";
+
+  if (modeTag) modeTag.textContent = label;
+  if (countTag) countTag.textContent = `Count: ${activeIds.length}`;
+  if (wrongTag) wrongTag.textContent = `Wrong: ${wrongSet.size}`;
 }
 
 function buildActiveIds(newMode) {
@@ -97,7 +96,8 @@ function buildActiveIds(newMode) {
   } else if (mode === MODE.STAR) {
     list = BANK.filter(x => x.star).map(x => x.id);
   } else if (mode === MODE.WRONG) {
-    list = Array.from(wrongSet).filter(id => BANK.some(x => x.id === id));
+    const allIds = new Set(BANK.map(x => x.id));
+    list = Array.from(wrongSet).filter(id => allIds.has(id));
   }
 
   activeIds = list;
@@ -116,17 +116,27 @@ function getCurrent() {
 function updateTopBar() {
   if (!activeIds.length) {
     progressTextEl.textContent = "Question 0";
-    starTag.style.display = "none";
+    if (starTag) starTag.style.display = "none";
     return;
   }
   progressTextEl.textContent = `Question ${pos + 1} of ${activeIds.length}`;
   const q = getCurrent();
-  starTag.style.display = q?.star ? "inline-block" : "none";
+  if (starTag) starTag.style.display = q?.star ? "inline-block" : "none";
 }
 
 function setAnswerVisible(visible) {
+  // 关键：这里直接控制显示，并且同步按钮文字
   answerPanel.style.display = visible ? "block" : "none";
   toggleAnswerBtn.textContent = visible ? "Hide Answer" : "Show Answer";
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function render() {
@@ -143,7 +153,7 @@ function render() {
   if (!activeIds.length) {
     questionEl.innerHTML = `
       <div>这个模式下没有题目。</div>
-      ${mode === MODE.WRONG ? `<div class="muted zh" style="margin-top:6px;">错题本为空：做题时点“没记住”就会加入错题。</div>` : ""}
+      ${mode === MODE.WRONG ? `<div class="muted zh" style="margin-top:6px;">错题本为空：点“没记住”会加入错题。</div>` : ""}
     `;
     answerPanel.style.display = "none";
     setAnswerVisible(false);
@@ -151,12 +161,12 @@ function render() {
   }
 
   const q = getCurrent();
+
   questionEl.innerHTML = `
     <div>${escapeHtml(q.en)}</div>
     ${q.zh ? `<div class="muted zh">${escapeHtml(q.zh)}</div>` : ""}
   `;
 
-  // Answer panel content (always prepared)
   const enList = q.answers_en.length
     ? `<div class="muted">Acceptable answers (EN):</div>
        <ol>${q.answers_en.map(a => `<li>${escapeHtml(a)}</li>`).join("")}</ol>`
@@ -173,16 +183,21 @@ function render() {
   setAnswerVisible(revealed);
 }
 
-/** --------- Actions --------- */
-toggleAnswerBtn.addEventListener("click", () => {
+/** --------- Show Answer (Global) --------- */
+window.__toggleAnswer = function () {
   if (!activeIds.length) return;
   const now = !!revealedByPos[pos];
   revealedByPos[pos] = !now;
   setAnswerVisible(!now);
+};
+
+/** --------- Also bind as backup (in case) --------- */
+toggleAnswerBtn.addEventListener("click", () => {
+  window.__toggleAnswer();
 });
 
+/** --------- Other actions --------- */
 markKnowBtn.addEventListener("click", () => {
-  // "know" = remove from wrong set if exists
   const q = getCurrent();
   if (!q) return;
   if (wrongSet.has(q.id)) {
@@ -213,15 +228,12 @@ nextBtn.addEventListener("click", () => {
     pos++;
     render();
   } else {
-    // loop to start for study convenience
-    pos = 0;
+    pos = 0; // loop
     render();
   }
 });
 
-restartBtn.addEventListener("click", () => {
-  buildActiveIds(mode);
-});
+restartBtn.addEventListener("click", () => buildActiveIds(mode));
 
 btnFull.addEventListener("click", () => buildActiveIds(MODE.FULL));
 btnRandom20.addEventListener("click", () => buildActiveIds(MODE.RAND20));
@@ -237,16 +249,6 @@ btnClearWrong.addEventListener("click", () => {
     render();
   }
 });
-
-/** --------- Utils --------- */
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
 
 /** --------- Init --------- */
 buildActiveIds(MODE.FULL);
