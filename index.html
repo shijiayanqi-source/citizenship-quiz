@@ -2,159 +2,132 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>US Citizenship Quiz</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      background: #f6f7fb;
+      padding: 20px;
     }
     .card {
-      max-width: 600px;
-      margin: 40px auto;
-      background: #ffffff;
+      max-width: 420px;
+      margin: auto;
+      background: #fff;
       padding: 24px;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
     }
     h1 {
       margin-top: 0;
     }
     button {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       font-size: 16px;
-      margin-top: 10px;
-      border-radius: 8px;
       border: none;
-      cursor: pointer;
-    }
-    .primary {
-      background: #007aff;
+      border-radius: 10px;
+      background: black;
       color: white;
+      cursor: pointer;
+      margin-top: 12px;
     }
-    .option {
-      background: #eeeeee;
+    button.secondary {
+      background: #e5e5e5;
+      color: black;
     }
-    .option:hover {
-      background: #dddddd;
-    }
-    .result {
-      font-weight: bold;
+    .question {
       margin-top: 20px;
-      text-align: center;
+      font-weight: bold;
+    }
+    .zh {
+      color: #666;
+      margin-top: 6px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+    .status {
+      margin-top: 12px;
+      font-weight: bold;
     }
   </style>
 </head>
-
 <body>
-  <div class="card">
-    <h1>US Citizenship Quiz</h1>
-    <p>100% FREE · 中英文对照 · 随机 20 题 · 自动评分</p>
 
-    <button id="startBtn" class="primary">Start Practice</button>
+<div class="card">
+  <h1>US Citizenship Quiz</h1>
+  <p>随机 20 题 · 中英对照 · ≥12/20 通过</p>
 
-    <div id="quiz" style="display:none;">
-      <h2 id="q-en"></h2>
-      <h3 id="q-zh" style="color:#666;"></h3>
-      <div id="options"></div>
-      <div class="result" id="result"></div>
-    </div>
+  <div id="app">
+    <button onclick="startQuiz()">Start Practice</button>
   </div>
+</div>
 
-  <script>
-    // 简化题库（示例 10 题，可继续往下加）
-    const QUESTIONS = [
-      {
-        en: "What is the supreme law of the land?",
-        zh: "美国的最高法律是什么？",
-        options: [
-          { en: "The Constitution", zh: "宪法", correct: true },
-          { en: "The Declaration of Independence", zh: "独立宣言", correct: false },
-          { en: "The Bill of Rights", zh: "权利法案", correct: false }
-        ]
-      },
-      {
-        en: "What does the Constitution do?",
-        zh: "宪法的作用是什么？",
-        options: [
-          { en: "Sets up the government", zh: "建立政府", correct: true },
-          { en: "Declares war", zh: "宣布战争", correct: false },
-          { en: "Names the president", zh: "指定总统", correct: false }
-        ]
-      },
-      {
-        en: "How many amendments does the Constitution have?",
-        zh: "宪法共有多少条修正案？",
-        options: [
-          { en: "27", zh: "27 条", correct: true },
-          { en: "10", zh: "10 条", correct: false },
-          { en: "50", zh: "50 条", correct: false }
-        ]
-      }
-    ];
+<script src="questions.js"></script>
 
-    const startBtn = document.getElementById("startBtn");
-    const quiz = document.getElementById("quiz");
-    const qEn = document.getElementById("q-en");
-    const qZh = document.getElementById("q-zh");
-    const optionsDiv = document.getElementById("options");
-    const resultDiv = document.getElementById("result");
+<script>
+let quiz = [];
+let index = 0;
+let score = 0;
 
-    let current = 0;
-    let score = 0;
-    let quizSet = [];
+function startQuiz() {
+  quiz = shuffle([...QUESTIONS]).slice(0, 20);
+  index = 0;
+  score = 0;
+  showQuestion();
+}
 
-    function startQuiz() {
-      quizSet = QUESTIONS
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 20);
+function showQuestion() {
+  const q = quiz[index];
+  document.getElementById("app").innerHTML = `
+    <div class="question">${index + 1}/20. ${q.en}</div>
+    <div class="zh">${q.zh}</div>
+    <input id="answer" placeholder="Type your answer"/>
+    <button onclick="submit()">Submit</button>
+  `;
+}
 
-      current = 0;
-      score = 0;
-      quiz.style.display = "block";
-      resultDiv.textContent = "";
-      showQuestion();
-    }
+function submit() {
+  const val = document.getElementById("answer").value.toLowerCase().trim();
+  const ok = quiz[index].answers.some(a =>
+    val.includes(a.toLowerCase())
+  );
 
-    function showQuestion() {
-      const q = quizSet[current];
-      qEn.textContent = `Q${current + 1}. ${q.en}`;
-      qZh.textContent = q.zh;
-      optionsDiv.innerHTML = "";
+  if (ok) score++;
 
-      q.options.forEach(opt => {
-        const btn = document.createElement("button");
-        btn.className = "option";
-        btn.textContent = `${opt.en} / ${opt.zh}`;
-        btn.onclick = () => {
-          if (opt.correct) score++;
-          current++;
-          if (current < quizSet.length) {
-            showQuestion();
-          } else {
-            finishQuiz();
-          }
-        };
-        optionsDiv.appendChild(btn);
-      });
-    }
+  index++;
+  if (index < 20) {
+    showQuestion();
+  } else {
+    finish();
+  }
+}
 
-    function finishQuiz() {
-      optionsDiv.innerHTML = "";
-      qEn.textContent = "Finished!";
-      qZh.textContent = "已完成";
-      resultDiv.textContent =
-        `Score: ${score}/${quizSet.length} · ` +
-        (score >= 12 ? "PASS ✅" : "TRY AGAIN ❌");
-    }
+function finish() {
+  const pass = score >= 12;
+  document.getElementById("app").innerHTML = `
+    <h2>Score: ${score}/20</h2>
+    <div class="status">${pass ? "✅ PASSED" : "❌ NOT PASSED"}</div>
+    <button onclick="startQuiz()">Try Again</button>
+  `;
+}
 
-    startBtn.onclick = startQuiz;
-  </script>
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+</script>
+
 </body>
 </html>
+
 
 
