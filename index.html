@@ -1,358 +1,201 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>US Citizenship Quiz</title>
-  <style>
-    body{font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;background:#f6f7fb;margin:0;padding:20px;}
-    .card{max-width:720px;margin:20px auto;background:#fff;padding:22px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08);}
-    h1{margin:0 0 6px 0;font-size:26px;}
-    .sub{color:#6b7280;margin:0 0 14px 0;line-height:1.4;}
-    .row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 0 0;}
-    .chip{background:#f3f4f6;border-radius:999px;padding:6px 10px;font-size:13px;color:#111;}
-    .chip strong{font-weight:700;}
-    button{width:100%;padding:14px;font-size:16px;border:none;border-radius:12px;background:#111;color:#fff;cursor:pointer;}
-    button.secondary{background:#e5e7eb;color:#111;}
-    button.small{width:auto;padding:10px 12px;font-size:14px;border-radius:10px;}
-    .split{height:1px;background:#eef2f7;margin:16px 0;}
-    .qen{font-size:18px;font-weight:800;margin:0 0 6px 0;}
-    .qzh{margin:0 0 10px 0;color:#6b7280;}
-    .opt{background:#f3f4f6;color:#111;margin-top:10px;}
-    .opt:disabled{opacity:.6;cursor:not-allowed;}
-    .status{margin-top:12px;font-weight:800;}
-    .muted{color:#6b7280;font-size:13px;line-height:1.45;}
-    .list{margin-top:10px;}
-    .wrongItem{border:1px solid #eee;border-radius:12px;padding:12px;margin-top:10px;background:#fafafa;}
-    .tag{display:inline-block;background:#eef2ff;border-radius:999px;padding:4px 8px;font-size:12px;margin-left:6px;}
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Citizenship Quiz</title>
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  background:#f6f7fb;
+  margin:0; padding:20px;
+}
+.card {
+  max-width:720px;
+  margin:auto;
+  background:#fff;
+  padding:24px;
+  border-radius:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.08);
+}
+h1 {margin-top:0;}
+button {
+  width:100%;
+  padding:12px;
+  font-size:16px;
+  border:none;
+  border-radius:8px;
+  background:#0066cc;
+  color:#fff;
+  cursor:pointer;
+  margin-top:8px;
+}
+button.small {width:auto; padding:8px 14px; font-size:14px;}
+button.secondary {background:#555;}
+.opt {
+  width:100%;
+  text-align:left;
+  background:#f4f4f4;
+  border-radius:10px;
+  padding:10px 14px;
+  margin-top:10px;
+  border:1px solid transparent;
+}
+.opt:hover {background:#e9f2ff;}
+.opt.correct {background:#d4f8d4; border-color:#4caf50;}
+.opt.wrong {background:#ffd4d4; border-color:#f44336;}
+.opt.disabled {pointer-events:none; opacity:0.7;}
+.row {display:flex; flex-wrap:wrap; gap:8px;}
+.chip {
+  background:#e0e0e0;
+  border-radius:20px;
+  padding:4px 10px;
+  font-size:13px;
+}
+.chip strong {color:#111;}
+.split {margin-top:16px; border-bottom:1px solid #ddd;}
+.sub {font-size:14px; color:#444; margin-top:-6px; margin-bottom:10px;}
+</style>
 </head>
-
 <body>
-  <div class="card">
-    <h1>US Citizenship Quiz</h1>
-    <p class="sub">选择题 · 中英文对照 · 随机练习 / 128全考 · 错题纠正 + 错题本</p>
 
-    <div class="row">
-      <div class="chip">Mode: <strong id="modeChip">-</strong></div>
-      <div class="chip">Progress: <strong id="prog">0/0</strong></div>
-      <div class="chip">Score: <strong id="score">0</strong></div>
-      <div class="chip">Bank: <strong id="bankSize">?</strong></div>
-      <div class="chip">Wrong saved: <strong id="wrongCount">0</strong></div>
-    </div>
+<div class="card">
+  <h1>US Citizenship Quiz</h1>
+  <div class="sub">官方128题（2025版）｜英中对照选择题版</div>
 
-    <div class="row" style="margin-top:12px;">
-      <button class="small secondary" id="practice20Btn">Practice 20 / 随机20题</button>
-      <button class="small secondary" id="exam128Btn">Full Exam 128 / 全考128题</button>
-      <button class="small secondary" id="wrongBtn">Wrong Review / 错题本</button>
-      <button class="small secondary" id="clearWrongBtn">Clear Wrong / 清空错题</button>
-    </div>
-
-    <div class="split"></div>
-
-    <div id="quizArea" style="display:none;">
-      <div class="qen" id="qEn"></div>
-      <div class="qzh" id="qZh"></div>
-      <div id="opts"></div>
-      <div class="status" id="status"></div>
-      <div class="row" style="margin-top:10px;">
-        <button class="small secondary" id="nextBtn" style="display:none;">Next / 下一题</button>
-        <button class="small secondary" id="quitBtn">Quit / 退出</button>
-      </div>
-    </div>
-
-    <div id="doneArea" style="display:none;">
-      <h2 style="margin:0 0 8px 0;">Result / 结果</h2>
-      <div class="status" id="finalStatus"></div>
-      <div class="muted" id="finalHint"></div>
-
-      <div id="wrongListWrap" style="display:none;">
-        <div class="split"></div>
-        <h3 style="margin:0 0 6px 0;">Wrong answers (this session) / 本次错题</h3>
-        <div class="muted">下面列出你本次做错的题，并显示正确答案。</div>
-        <div class="list" id="wrongList"></div>
-      </div>
-    </div>
-
-    <p class="muted" style="margin-top:16px;">
-      ⚠️ Educational tool only. Not affiliated with USCIS. 题库仅供学习练习，非 USCIS 官方应用。
-    </p>
+  <div class="row">
+    <div class="chip">Mode: <strong id="modeChip">Practice</strong></div>
+    <div class="chip">Progress: <strong id="progress">0/0</strong></div>
+    <div class="chip">Score: <strong id="score">0</strong></div>
+    <div class="chip">Wrong saved: <strong id="wrongCount">0</strong></div>
   </div>
 
-  <!-- 题库文件：必须是 const QUESTIONS = [...]，每题 options 里有 correct:true -->
-  <script src="questions.js?v=mcq"></script>
+  <div class="split"></div>
 
-  <script>
-    // -------- utils --------
-    const shuffle = (arr) => {
-      const a = arr.slice();
-      for (let i=a.length-1;i>0;i--){
-        const j = Math.floor(Math.random()*(i+1));
-        [a[i],a[j]]=[a[j],a[i]];
-      }
-      return a;
-    };
+  <div class="row" style="margin-top:12px;">
+    <button class="small" onclick="startPractice(20)">🧩 Practice 20</button>
+    <button class="small" onclick="startFull()">📘 Full 128</button>
+    <button class="small" onclick="reviewWrong()">❌ Wrong Review</button>
+    <button class="small secondary" onclick="clearWrong()">🗑 Clear Wrong</button>
+  </div>
 
-    const WRONG_KEY = "ucq_wrong_ids_v1";
+  <div class="split"></div>
 
-    function getWrongIds(){
-      try { return JSON.parse(localStorage.getItem(WRONG_KEY) || "[]"); }
-      catch { return []; }
+  <div id="quizArea" style="margin-top:16px;"></div>
+
+  <div class="split"></div>
+
+  <div class="row" style="margin-top:12px;">
+    <button id="nextBtn" onclick="nextQuestion()">Next / 下一题</button>
+  </div>
+</div>
+
+<script src="questions.js"></script>
+<script>
+let questions = [];
+let current = 0;
+let score = 0;
+let mode = 'practice';
+let wrongList = JSON.parse(localStorage.getItem('wrongList') || '[]');
+let currentSet = [];
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function randomOptions(q){
+  const correct = q.answers_en[0];
+  const options = [correct];
+  while(options.length<4){
+    const r = QUESTIONS[Math.floor(Math.random()*QUESTIONS.length)];
+    const a = r.answers_en[0];
+    if(a && !options.includes(a)) options.push(a);
+  }
+  return shuffle(options);
+}
+
+function startPractice(n=20){
+  mode='practice';
+  currentSet = shuffle([...QUESTIONS]).slice(0,n);
+  current=0; score=0;
+  document.getElementById('modeChip').innerText='Practice '+n;
+  showQuestion();
+}
+
+function startFull(){
+  mode='full';
+  currentSet = shuffle([...QUESTIONS]);
+  current=0; score=0;
+  document.getElementById('modeChip').innerText='Full 128';
+  showQuestion();
+}
+
+function reviewWrong(){
+  if(wrongList.length===0){alert("暂无错题。");return;}
+  mode='wrong';
+  currentSet = QUESTIONS.filter(q=>wrongList.includes(q.id));
+  current=0; score=0;
+  document.getElementById('modeChip').innerText='Wrong Review';
+  showQuestion();
+}
+
+function clearWrong(){
+  if(confirm("确定要清除错题记录吗？")){
+    wrongList=[];
+    localStorage.setItem('wrongList','[]');
+    updateInfo();
+    alert("已清除错题记录。");
+  }
+}
+
+function showQuestion(){
+  const q = currentSet[current];
+  if(!q){alert("完成！ 分数："+score+"/"+currentSet.length);return;}
+  updateInfo();
+  const opts = randomOptions(q);
+  const area = document.getElementById('quizArea');
+  area.innerHTML = `
+    <div style="margin-bottom:12px;font-weight:bold;">${current+1}. ${q.en}</div>
+    <div style="color:#555;margin-bottom:8px;">${q.zh}</div>
+    ${opts.map(o=>`<div class='opt' onclick='selectOption(this, "${escapeHTML(o)}", "${escapeHTML(q.answers_en[0])}", ${q.id})'>${o}</div>`).join('')}
+  `;
+}
+
+function selectOption(el, chosen, correct, id){
+  const opts=document.querySelectorAll('.opt');
+  opts.forEach(o=>o.classList.add('disabled'));
+  if(chosen===correct){
+    el.classList.add('correct');
+    score++;
+  }else{
+    el.classList.add('wrong');
+    if(!wrongList.includes(id)){
+      wrongList.push(id);
+      localStorage.setItem('wrongList',JSON.stringify(wrongList));
     }
-    function setWrongIds(ids){
-      localStorage.setItem(WRONG_KEY, JSON.stringify(ids));
-      refreshWrongCount();
-    }
-    function addWrongId(id){
-      const ids = getWrongIds();
-      if (!ids.includes(id)) ids.push(id);
-      setWrongIds(ids);
-    }
-    function refreshWrongCount(){
-      document.getElementById("wrongCount").textContent = String(getWrongIds().length);
-    }
+  }
+  updateInfo();
+}
 
-    function getCorrectOption(q){
-      return (q.options || []).find(o => o.correct === true) || null;
-    }
+function nextQuestion(){
+  current++;
+  if(current>=currentSet.length){
+    alert("测验结束 ✅ 得分："+score+"/"+currentSet.length);
+  }else{
+    showQuestion();
+  }
+}
 
-    // -------- UI refs --------
-    const modeChip = document.getElementById("modeChip");
-    const progEl = document.getElementById("prog");
-    const scoreEl = document.getElementById("score");
-    const bankSizeEl = document.getElementById("bankSize");
+function updateInfo(){
+  document.getElementById('progress').innerText=`${current+1}/${currentSet.length}`;
+  document.getElementById('score').innerText=score;
+  document.getElementById('wrongCount').innerText=wrongList.length;
+}
 
-    const practice20Btn = document.getElementById("practice20Btn");
-    const exam128Btn = document.getElementById("exam128Btn");
-    const wrongBtn = document.getElementById("wrongBtn");
-    const clearWrongBtn = document.getElementById("clearWrongBtn");
+function escapeHTML(str){
+  return str.replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
 
-    const quizArea = document.getElementById("quizArea");
-    const doneArea = document.getElementById("doneArea");
-    const qEn = document.getElementById("qEn");
-    const qZh = document.getElementById("qZh");
-    const opts = document.getElementById("opts");
-    const statusEl = document.getElementById("status");
-    const nextBtn = document.getElementById("nextBtn");
-    const quitBtn = document.getElementById("quitBtn");
-
-    const finalStatus = document.getElementById("finalStatus");
-    const finalHint = document.getElementById("finalHint");
-    const wrongListWrap = document.getElementById("wrongListWrap");
-    const wrongList = document.getElementById("wrongList");
-
-    // -------- state --------
-    let bank = [];
-    let quiz = [];
-    let mode = "";
-    let idx = 0;
-    let score = 0;
-    let total = 0;
-    let answeredLocked = false;
-    let sessionWrong = []; // store wrong question objects for this run
-
-    function ensureBank(){
-      if (!Array.isArray(QUESTIONS) || QUESTIONS.length < 20){
-        alert("❌ questions.js 没加载到或题库太少。\n请确认 questions.js 里是：const QUESTIONS = [ ...128题... ]");
-        return false;
-      }
-      bank = QUESTIONS;
-      bankSizeEl.textContent = String(bank.length);
-      return true;
-    }
-
-    function setHeader(){
-      modeChip.textContent = mode;
-      progEl.textContent = `${Math.min(idx, total)}/${total}`;
-      scoreEl.textContent = String(score);
-      refreshWrongCount();
-    }
-
-    function showQuiz(){
-      doneArea.style.display = "none";
-      quizArea.style.display = "block";
-      nextBtn.style.display = "none";
-      statusEl.textContent = "";
-    }
-
-    function showDone(){
-      quizArea.style.display = "none";
-      doneArea.style.display = "block";
-    }
-
-    function startPractice20(){
-      if (!ensureBank()) return;
-      mode = "Practice 20";
-      quiz = shuffle(bank).slice(0, 20);
-      idx = 0; score = 0; total = 20;
-      sessionWrong = [];
-      setHeader();
-      showQuiz();
-      renderQ();
-    }
-
-    function startExam128(){
-      if (!ensureBank()) return;
-      mode = "Exam 128";
-      quiz = bank.slice(); // keep order as in file
-      idx = 0; score = 0; total = quiz.length;
-      sessionWrong = [];
-      setHeader();
-      showQuiz();
-      renderQ();
-    }
-
-    function startWrongReview(){
-      if (!ensureBank()) return;
-      const ids = getWrongIds();
-      const picked = bank.filter(q => ids.includes(q.id));
-      if (!picked.length){
-        alert("你现在没有错题。\n先做一套题，做错的会自动加入错题本。");
-        return;
-      }
-      mode = "Wrong Review";
-      quiz = shuffle(picked);
-      idx = 0; score = 0; total = quiz.length;
-      sessionWrong = [];
-      setHeader();
-      showQuiz();
-      renderQ();
-    }
-
-    function renderQ(){
-      answeredLocked = false;
-      nextBtn.style.display = "none";
-      statusEl.textContent = "";
-
-      const q = quiz[idx];
-      qEn.textContent = `Q${idx + 1}. ${q.en}`;
-      qZh.textContent = q.zh || "";
-      opts.innerHTML = "";
-
-      const options = shuffle(q.options || []);
-      options.forEach((o) => {
-        const b = document.createElement("button");
-        b.className = "opt";
-        b.textContent = `${o.en} / ${o.zh}`;
-        b.onclick = () => onAnswer(q, o, b);
-        opts.appendChild(b);
-      });
-
-      setHeader();
-    }
-
-    function disableAllOptions(){
-      [...opts.querySelectorAll("button")].forEach(b => b.disabled = true);
-    }
-
-    function onAnswer(q, option, btn){
-      if (answeredLocked) return;
-      answeredLocked = true;
-
-      const correctOpt = getCorrectOption(q);
-      const isCorrect = option.correct === true;
-
-      disableAllOptions();
-
-      if (isCorrect){
-        score++;
-        statusEl.textContent = "✅ Correct / 正确";
-      } else {
-        statusEl.textContent = "❌ Incorrect / 错误";
-        addWrongId(q.id);
-        sessionWrong.push(q);
-
-        // show correct answer immediately
-        if (correctOpt){
-          statusEl.textContent += `  | ✅ Correct: ${correctOpt.en} / ${correctOpt.zh}`;
-        } else {
-          statusEl.textContent += "  | ✅ Correct: (not found)";
-        }
-      }
-
-      // show Next button (user-controlled pace)
-      nextBtn.style.display = "inline-block";
-      setHeader();
-    }
-
-    function next(){
-      if (!answeredLocked) return; // force answer before next
-      idx++;
-      if (idx < total){
-        renderQ();
-      } else {
-        finish();
-      }
-    }
-
-    function finish(){
-      showDone();
-
-      const percent = total ? Math.round((score / total) * 100) : 0;
-
-      // pass rule:
-      // - Practice20: >=12
-      // - Exam128: show percent (you can decide your own pass)
-      let passText = "";
-      if (mode === "Practice 20") passText = (score >= 12) ? "PASS ✅" : "NOT PASS ❌";
-      if (mode === "Exam 128") passText = `Completed ✅`;
-      if (mode === "Wrong Review") passText = `Completed ✅`;
-
-      finalStatus.textContent = `Mode: ${mode} | Score: ${score}/${total} (${percent}%) | ${passText}`;
-      finalHint.textContent = (mode === "Practice 20")
-        ? "通过标准：≥12/20"
-        : "提示：全考模式只显示完成情况与百分比，你可以自己设定目标分数。";
-
-      // show wrong list for this session
-      if (sessionWrong.length){
-        wrongListWrap.style.display = "block";
-        wrongList.innerHTML = "";
-        sessionWrong.forEach((q) => {
-          const correctOpt = getCorrectOption(q);
-          const div = document.createElement("div");
-          div.className = "wrongItem";
-          div.innerHTML = `
-            <div style="font-weight:800;">${q.en} <span class="tag">ID ${q.id}</span></div>
-            <div class="muted">${q.zh || ""}</div>
-            <div style="margin-top:8px;font-weight:700;">✅ Correct: ${correctOpt ? (correctOpt.en + " / " + correctOpt.zh) : "(not found)"}</div>
-          `;
-          wrongList.appendChild(div);
-        });
-      } else {
-        wrongListWrap.style.display = "none";
-      }
-
-      setHeader();
-    }
-
-    function quit(){
-      quizArea.style.display = "none";
-      doneArea.style.display = "none";
-      statusEl.textContent = "";
-      nextBtn.style.display = "none";
-      mode = "-";
-      idx = 0; score = 0; total = 0;
-      quiz = [];
-      sessionWrong = [];
-      setHeader();
-      alert("退出成功 / Quit");
-    }
-
-    // -------- bind --------
-    refreshWrongCount();
-
-    practice20Btn.onclick = startPractice20;
-    exam128Btn.onclick = startExam128;
-    wrongBtn.onclick = startWrongReview;
-
-    clearWrongBtn.onclick = () => {
-      localStorage.removeItem(WRONG_KEY);
-      refreshWrongCount();
-      alert("已清空错题本 / Cleared");
-    };
-
-    nextBtn.onclick = next;
-    quitBtn.onclick = quit;
-  </script>
+// 初始化
+updateInfo();
+</script>
 </body>
 </html>
