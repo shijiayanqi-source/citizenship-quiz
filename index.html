@@ -48,6 +48,15 @@
     ol{margin:8px 0 0; padding-left:18px}
     li{margin:6px 0}
     .mini{font-size:13px}
+
+    /* details 样式让它看起来像按钮 */
+    details > summary{
+      list-style:none;
+      display:inline-block;
+      user-select:none;
+      cursor:pointer;
+    }
+    details > summary::-webkit-details-marker{display:none}
   </style>
 </head>
 
@@ -63,6 +72,7 @@
         <span id="modeTag" class="tag">Mode: Full 128</span>
         <span id="countTag" class="tag">Count: 0</span>
         <span id="wrongTag" class="tag">Wrong: 0</span>
+        <span id="debugTag" class="tag">Loaded: ...</span>
 
         <button id="btnFull" class="btn secondary">Full 128</button>
         <button id="btnRandom20" class="btn secondary">Random 20</button>
@@ -78,17 +88,15 @@
           <div id="progressText" class="muted">Question</div>
           <span id="starTag" class="tag" style="display:none;">★ 65/20</span>
         </div>
-        <div class="row">
-          <!-- 关键：直接用 onclick 调全局函数，iPad Safari 不会失效 -->
-          <button id="toggleAnswerBtn" class="btn"
-                  onclick="window.__toggleAnswer && window.__toggleAnswer()">
-            Show Answer
-          </button>
-        </div>
+
+        <!-- 不用 JS 按钮了，改用 details 原生展开 -->
+        <details id="answerDetails">
+          <summary class="btn">Show Answer</summary>
+          <div id="answerPanel" class="panel"></div>
+        </details>
       </div>
 
       <div id="question" class="q">Loading…</div>
-      <div id="answerPanel" class="panel" style="display:none;"></div>
 
       <div class="controls">
         <button id="markKnowBtn" class="btn">记住 ✅</button>
@@ -114,10 +122,8 @@
     }
   </script>
 
-  <!-- 版本号改成 b：强制拉新 -->
-  <script src="./questions.js?v=study20260112b"></script>
-  <script src="./app.js?v=study20260112b"></script>
+  <!-- 版本号换成 c 强制刷新 -->
+  <script src="./questions.js?v=study20260112c"></script>
+  <script src="./app.js?v=study20260112c"></script>
 </body>
 </html>
-
-
