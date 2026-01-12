@@ -57,22 +57,12 @@
   <div class="app">
     <header class="header">
       <h1>US Citizenship Quiz</h1>
-      <p class="muted">128 Questions • Multiple choice practice</p>
+      <p class="muted">Multiple choice practice</p>
     </header>
 
-    <!-- Intro -->
-    <main class="card" id="intro">
-      <h2 style="margin:0 0 8px;">Practice Mode</h2>
-      <p class="muted" style="margin:0 0 14px;">
-        Click “Start Practice” to begin. Each question locks after you choose an answer.
-      </p>
-      <button id="startBtn" class="btn">Start Practice</button>
-    </main>
-
-    <!-- Quiz -->
-    <main class="card" id="quiz" style="display:none;">
+    <main class="card">
       <div class="topbar">
-        <div id="progressText" class="muted">Question 1 of 128</div>
+        <div id="progressText" class="muted">Question 1</div>
         <div id="scoreText" class="muted">Score: 0</div>
       </div>
 
@@ -87,23 +77,11 @@
 
       <div id="result" class="result" style="display:none;"></div>
     </main>
-
-    <p class="muted" style="text-align:center;margin-top:14px;">
-      Tip: If you updated files and nothing changes, do Ctrl + F5 (force refresh).
-    </p>
   </div>
 
   <script src="./questions.js"></script>
   <script src="./app.js"></script>
-
-  <script>
-    // Optional: service worker
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js").catch(() => {});
-      });
-    }
-  </script>
 </body>
 </html>
   
+
