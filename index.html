@@ -17,17 +17,28 @@
       background: radial-gradient(1200px 700px at 20% 10%, #1b2a55 0%, var(--bg) 55%);
       color:var(--text);
     }
-    .app{max-width:900px;margin:0 auto;padding:28px 16px 40px}
-    .header h1{margin:0 0 6px;font-size:32px}
+    .app{max-width:980px;margin:0 auto;padding:26px 16px 40px}
+    .header{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;flex-wrap:wrap}
+    .header h1{margin:0 0 6px;font-size:30px}
     .muted{color:var(--muted);font-size:14px}
+    .pillrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+    .btn{
+      padding:10px 14px;border-radius:12px;border:1px solid var(--border);
+      background:var(--btn);color:var(--text);cursor:pointer;
+      font-size:14px;
+    }
+    .btn.secondary{background:var(--btn2)}
+    .btn.danger{background: rgba(255,90,122,.2); border-color: rgba(255,90,122,.45)}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
     .card{
-      margin-top:18px;background: rgba(17, 26, 46, .92);
+      margin-top:16px;background: rgba(17, 26, 46, .92);
       border:1px solid var(--border); border-radius:18px;
       padding:18px; box-shadow:0 18px 60px rgba(0,0,0,.35);
     }
-    .topbar{display:flex;justify-content:space-between;gap:12px;margin-bottom:10px}
-    .question{margin:12px 0 12px;font-size:22px;line-height:1.25}
-    .choices{display:grid;gap:10px;margin:10px 0 14px}
+    .topbar{display:flex;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+    .question{margin:12px 0 10px;font-size:22px;line-height:1.25}
+    .question .zh{margin-top:6px}
+    .choices{display:grid;gap:10px;margin:10px 0 12px}
     .choice{
       width:100%; text-align:left; padding:12px 12px;
       background: rgba(27, 42, 74, .55);
@@ -39,34 +50,54 @@
     .choice.correct{border-color: rgba(43, 213, 118, .7); background: rgba(43, 213, 118, .15)}
     .choice.wrong{border-color: rgba(255, 90, 122, .7); background: rgba(255, 90, 122, .14)}
     .controls{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
-    .btn{
-      padding:10px 14px;border-radius:12px;border:1px solid var(--border);
-      background:var(--btn);color:var(--text);cursor:pointer;
-    }
-    .btn:disabled{opacity:.45;cursor:not-allowed}
-    .btn.secondary{background:var(--btn2)}
-    .btn.danger{background: rgba(255,90,122,.2); border-color: rgba(255,90,122,.45)}
     .result{
-      margin-top:14px;padding:12px;border-radius:14px;border:1px solid var(--border);
-      background: rgba(255,255,255,.04);line-height:1.5
+      margin-top:12px;padding:12px;border-radius:14px;border:1px solid var(--border);
+      background: rgba(255,255,255,.04);line-height:1.55
     }
+    .mini{font-size:13px}
+    .tag{
+      display:inline-block;
+      padding:4px 10px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      background: rgba(255,255,255,.04);
+      font-size:13px;
+      color: var(--muted);
+    }
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .spacer{flex:1}
   </style>
 </head>
 
 <body>
   <div class="app">
     <header class="header">
-      <h1>US Citizenship Quiz</h1>
-      <p class="muted">Auto multiple-choice from your USCIS Q&A bank</p>
+      <div>
+        <h1>US Citizenship Quiz</h1>
+        <div class="muted">选择题模式（自动从 USCIS 问答库生成选项） • 支持 英文+中文 • 随机20题 / 全部128题 / 错题本</div>
+      </div>
+      <div class="pillrow">
+        <span id="modeTag" class="tag">Mode: Full 128</span>
+        <span id="wrongTag" class="tag">Wrong: 0</span>
+        <button id="btnFull" class="btn secondary">Full 128</button>
+        <button id="btnRandom20" class="btn secondary">Random 20</button>
+        <button id="btnWrongOnly" class="btn secondary">Wrong Only</button>
+        <button id="btnClearWrong" class="btn danger">Clear Wrong</button>
+      </div>
     </header>
 
     <main class="card">
       <div class="topbar">
-        <div id="progressText" class="muted">Question 1</div>
-        <div id="scoreText" class="muted">Score: 0</div>
+        <div class="row">
+          <div id="progressText" class="muted">Question 1</div>
+          <span id="starTag" class="tag" style="display:none;">★ 65/20</span>
+        </div>
+        <div class="row">
+          <div id="scoreText" class="muted">Score: 0</div>
+        </div>
       </div>
 
-      <h2 id="question" class="question">Loading…</h2>
+      <div id="question" class="question">Loading…</div>
       <div id="choices" class="choices"></div>
 
       <div class="controls">
@@ -78,15 +109,13 @@
       <div id="result" class="result" style="display:none;"></div>
     </main>
 
-    <p class="muted" style="text-align:center;margin-top:14px;">
-      If it still shows Loading…, you are editing the wrong folder (root vs docs) or cache is stuck.
+    <p class="muted mini" style="text-align:center;margin-top:12px;">
+      如果你改完还是不更新：iPad Safari 需要“设置 → Safari → 清除历史记录与网站数据”。
     </p>
   </div>
 
+  <!-- 保持你现在的 questions.js（128题那份） -->
   <script src="./questions.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
-     
-
-
