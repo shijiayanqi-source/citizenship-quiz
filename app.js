@@ -1,5 +1,14 @@
 const $ = (id) => document.getElementById(id);
 
+const modeTag = $("modeTag");
+const wrongTag = $("wrongTag");
+const starTag = $("starTag");
+
+const btnFull = $("btnFull");
+const btnRandom20 = $("btnRandom20");
+const btnWrongOnly = $("btnWrongOnly");
+const btnClearWrong = $("btnClearWrong");
+
 const questionEl = $("question");
 const choicesEl = $("choices");
 const progressTextEl = $("progressText");
@@ -9,91 +18,229 @@ const nextBtn = $("nextBtn");
 const restartBtn = $("restartBtn");
 const resultEl = $("result");
 
-// 兼容：你现在 questions.js 是 const QUESTIONS = [...]
+/** ---------- Load bank (no need to modify questions.js) ---------- */
 const RAW =
   (Array.isArray(window.QUESTIONS) && window.QUESTIONS) ||
   (typeof QUESTIONS !== "undefined" && Array.isArray(QUESTIONS) ? QUESTIONS : []);
 
-function normalizeQnA(item) {
-  const q = item.en ?? item.q ?? "";
-  const answers = Array.isArray(item.answers_en) ? item.answers_en : [];
-  return { q, answers };
+function norm(item, fallbackIndex) {
+  const id = item.id ?? (fallbackIndex + 1);
+  return {
+    id,
+    star: !!item.star,
+    en: String(item.en ?? item.q ?? "").trim(),
+    zh: String(item.zh ?? "").trim(),
+    answers_en: Array.isArray(item.answers_en) ? item.answers_en.map(s => String(s).trim()).filter(Boolean) : [],
+    answers_zh: Array.isArray(item.answers_zh) ? item.answers_zh.map(s => String(s).trim()).filter(Boolean) : [],
+  };
 }
 
-const QNA = RAW.map(normalizeQnA).filter(x => x.q && x.answers && x.answers.length);
+const BANK = RAW.map(norm).filter(x => x.en && x.answers_en.length);
 
-// 把所有可选答案打平，作为干扰项池
+/** ---------- Wrong set persisted ---------- */
+const LS_KEY_WRONG = "uscis_wrong_ids_v1";
+
+function loadWrongSet() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(LS_KEY_WRONG) || "[]");
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveWrongSet(set) {
+  localStorage.setItem(LS_KEY_WRONG, JSON.stringify(Array.from(set)));
+}
+
+let wrongSet = loadWrongSet();
+
+/** ---------- Deterministic multiple-choice generation ---------- */
+/**
+ * We create 4 choices:
+ * - Correct: BANK[i].answers_en[0] (canonical)
+ * - Distractors: pulled from global answer pool
+ * deterministic per question id (so choices stable across sessions)
+ */
 const ANSWER_POOL = Array.from(
-  new Set(QNA.flatMap(x => x.answers).map(s => String(s).trim()).filter(Boolean))
+  new Set(BANK.flatMap(q => q.answers_en).map(s => String(s).trim()).filter(Boolean))
 );
 
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+function hashToSeed(x) {
+  // simple string hash -> uint32
+  const str = String(x);
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
   }
-  return arr;
+  return (h >>> 0);
+}
+function mulberry32(seed) {
+  return function () {
+    let t = (seed += 0x6D2B79F5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function shuffleWithRng(arr, rng) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
-// 生成四选一（每题只生成一次，保证前后翻页一致）
-const MC = QNA.map((x, idx) => {
-  // 正确答案：默认取 answers_en 的第 1 个（更稳定）
-  const correct = String(x.answers[0]).trim();
+function buildMC(q) {
+  const correct = q.answers_en[0]; // canonical
+  const rng = mulberry32(hashToSeed(q.id));
 
-  // 干扰项：从全局池里抽 3 个，不重复、不等于正确
   const candidates = ANSWER_POOL.filter(a => a !== correct);
-  shuffle(candidates);
-  const distractors = candidates.slice(0, 3);
+  const picked = [];
+  // pick 3 distractors deterministically
+  for (let k = 0; k < 2000 && picked.length < 3; k++) {
+    const idx = Math.floor(rng() * candidates.length);
+    const val = candidates[idx];
+    if (val && !picked.includes(val) && val !== correct) picked.push(val);
+  }
+  while (picked.length < 3) picked.push("N/A");
 
-  // 万一池子不够（极少），就补空字符串
-  while (distractors.length < 3) distractors.push("N/A");
-
-  const choices = shuffle([correct, ...distractors]);
-
+  const choices = shuffleWithRng([correct, ...picked], rng);
   return {
-    q: x.q,
+    qid: q.id,
+    star: q.star,
+    qEn: q.en,
+    qZh: q.zh,
+    answersEnAll: q.answers_en,
+    answersZhAll: q.answers_zh,
     choices,
     answerIndex: choices.indexOf(correct),
-    _correctText: correct
+    correctText: correct,
   };
-});
+}
 
-let index = 0;
-let selectedIndexByQ = {}; // { [qIndex]: choiceIndex }
-let lockedByQ = {};        // { [qIndex]: true/false }
+const MC_ALL = BANK.map(buildMC);
+const MC_BY_ID = new Map(MC_ALL.map(x => [x.qid, x]));
+
+/** ---------- Modes & session state ---------- */
+const MODE = {
+  FULL: "FULL",
+  RAND20: "RAND20",
+  WRONG: "WRONG",
+};
+
+let mode = MODE.FULL;
+let activeIds = [];   // list of qid
+let pos = 0;          // position within activeIds
+let selectedByPos = {};  // {pos: idx}
+let lockedByPos = {};    // {pos: true}
 let score = 0;
 
-function updateTopBar() {
-  progressTextEl.textContent = `Question ${index + 1} of ${MC.length || 0}`;
-  scoreTextEl.textContent = `Score: ${score}`;
+function setModeTag() {
+  const text =
+    mode === MODE.FULL ? "Mode: Full 128" :
+    mode === MODE.RAND20 ? "Mode: Random 20" :
+    "Mode: Wrong Only";
+  modeTag.textContent = text;
+  wrongTag.textContent = `Wrong: ${wrongSet.size}`;
 }
 
 function computeScore() {
   let s = 0;
-  for (let i = 0; i < MC.length; i++) {
-    const sel = selectedIndexByQ[i];
-    if (sel === MC[i].answerIndex) s++;
+  for (let p = 0; p < activeIds.length; p++) {
+    const q = MC_BY_ID.get(activeIds[p]);
+    const sel = selectedByPos[p];
+    if (lockedByPos[p] && sel === q.answerIndex) s++;
   }
   return s;
 }
 
-function renderQuestion() {
-  if (!MC.length) {
-    questionEl.textContent =
-      "No usable questions found. Your questions.js must contain const QUESTIONS = [{ en:'', answers_en:[...] }, ...]";
+function makeActiveIdsFull() {
+  return MC_ALL.map(x => x.qid);
+}
+function makeActiveIdsRandom20() {
+  const ids = makeActiveIdsFull();
+  // Fisher–Yates shuffle with Math.random (ok)
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  return ids.slice(0, 20);
+}
+function makeActiveIdsWrongOnly() {
+  const ids = Array.from(wrongSet).filter(id => MC_BY_ID.has(id));
+  return ids;
+}
+
+function startSession(newMode) {
+  mode = newMode;
+
+  if (mode === MODE.FULL) activeIds = makeActiveIdsFull();
+  if (mode === MODE.RAND20) activeIds = makeActiveIdsRandom20();
+  if (mode === MODE.WRONG) activeIds = makeActiveIdsWrongOnly();
+
+  pos = 0;
+  selectedByPos = {};
+  lockedByPos = {};
+  score = 0;
+
+  setModeTag();
+  render();
+}
+
+/** ---------- Render ---------- */
+function updateTopBar() {
+  progressTextEl.textContent = activeIds.length
+    ? `Question ${pos + 1} of ${activeIds.length}`
+    : "Question 0";
+
+  scoreTextEl.textContent = `Score: ${score}`;
+
+  const q = getCurrent();
+  if (q?.star) {
+    starTag.style.display = "inline-block";
+  } else {
+    starTag.style.display = "none";
+  }
+}
+
+function getCurrent() {
+  if (!activeIds.length) return null;
+  const id = activeIds[pos];
+  return MC_BY_ID.get(id) || null;
+}
+
+function render() {
+  setModeTag();
+
+  if (!activeIds.length) {
+    questionEl.innerHTML = `
+      <div>No questions in this mode.</div>
+      ${mode === MODE.WRONG ? `<div class="muted zh" style="margin-top:6px;">错题本为空（先做题，做错会自动记录）</div>` : ""}
+    `;
     choicesEl.innerHTML = "";
     prevBtn.disabled = true;
     nextBtn.disabled = true;
+    restartBtn.style.display = "inline-block";
+    resultEl.style.display = "none";
+    updateTopBar();
     return;
   }
 
-  const q = MC[index];
-  questionEl.textContent = q.q;
+  const q = getCurrent();
+  const locked = !!lockedByPos[pos];
+  const selected = selectedByPos[pos];
 
+  // question bilingual
+  questionEl.innerHTML = `
+    <div>${escapeHtml(q.qEn)}</div>
+    ${q.qZh ? `<div class="muted zh">${escapeHtml(q.qZh)}</div>` : ""}
+  `;
+
+  // choices
   choicesEl.innerHTML = "";
-  const locked = !!lockedByQ[index];
-  const selected = selectedIndexByQ[index];
-
   q.choices.forEach((text, i) => {
     const btn = document.createElement("button");
     btn.className = "choice";
@@ -107,80 +254,137 @@ function renderQuestion() {
     }
 
     btn.addEventListener("click", () => {
-      if (lockedByQ[index]) return;
+      if (lockedByPos[pos]) return;
 
-      selectedIndexByQ[index] = i;
-      lockedByQ[index] = true;
+      selectedByPos[pos] = i;
+      lockedByPos[pos] = true;
+
+      // wrong tracking
+      const isCorrect = (i === q.answerIndex);
+      if (!isCorrect) {
+        wrongSet.add(q.qid);
+      }
+      saveWrongSet(wrongSet);
 
       score = computeScore();
-      renderQuestion();
+      setModeTag();
+      render(); // re-render to show colors and explanation
       updateTopBar();
-
-      nextBtn.disabled = (index >= MC.length - 1);
     });
 
     choicesEl.appendChild(btn);
   });
 
-  prevBtn.disabled = (index === 0);
-  nextBtn.disabled = !locked || (index >= MC.length - 1);
+  // result/explanation for this question (shown only after answer)
+  if (locked) {
+    const isCorrect = (selected === q.answerIndex);
+    const yourText = selected != null ? q.choices[selected] : "";
+    const acceptableEn = q.answersEnAll?.length ? q.answersEnAll : [q.correctText];
+    const acceptableZh = q.answersZhAll?.length ? q.answersZhAll : [];
+
+    resultEl.style.display = "block";
+    resultEl.innerHTML = `
+      <div><strong>${isCorrect ? "✅ Correct" : "❌ Wrong"}</strong></div>
+      <div class="muted" style="margin-top:6px;">Your choice: ${escapeHtml(String(yourText))}</div>
+      <div class="muted">Correct: ${escapeHtml(String(q.correctText))}</div>
+      <div style="margin-top:10px;">
+        <div class="muted">Acceptable answers (EN):</div>
+        <ol style="margin:6px 0 0; padding-left:18px;">
+          ${acceptableEn.slice(0, 8).map(a => `<li style="margin:5px 0;">${escapeHtml(a)}</li>`).join("")}
+        </ol>
+        ${acceptableZh.length ? `
+          <div class="muted" style="margin-top:10px;">可接受答案（中文参考）：</div>
+          <ol style="margin:6px 0 0; padding-left:18px;">
+            ${acceptableZh.slice(0, 8).map(a => `<li style="margin:5px 0;">${escapeHtml(a)}</li>`).join("")}
+          </ol>
+        ` : ""}
+      </div>
+      <div class="muted mini" style="margin-top:10px;">
+        错题会自动进入错题本（Wrong Only 可练习错题）。
+      </div>
+    `;
+  } else {
+    resultEl.style.display = "none";
+  }
+
+  // buttons
+  prevBtn.disabled = (pos === 0);
+  nextBtn.disabled = !locked || (pos >= activeIds.length - 1);
 
   restartBtn.style.display = "none";
-  resultEl.style.display = "none";
+
+  updateTopBar();
 }
 
-function goPrev() {
-  if (index > 0) {
-    index--;
-    renderQuestion();
-    updateTopBar();
-  }
-}
-
-function showResult() {
+function showFinal() {
   const finalScore = computeScore();
   score = finalScore;
 
+  const acc = activeIds.length ? Math.round((finalScore / activeIds.length) * 100) : 0;
+
   resultEl.style.display = "block";
   resultEl.innerHTML = `
-    <strong>Finished!</strong><br/>
-    You answered <strong>${finalScore}</strong> out of <strong>${MC.length}</strong> correctly.<br/>
-    Accuracy: <strong>${Math.round((finalScore / MC.length) * 100)}%</strong>
+    <div><strong>Finished!</strong></div>
+    <div style="margin-top:6px;">Score: <strong>${finalScore}</strong> / <strong>${activeIds.length}</strong> (${acc}%)</div>
+    <div class="muted" style="margin-top:10px;">Wrong count (saved): ${wrongSet.size}</div>
   `;
-
   restartBtn.style.display = "inline-block";
   nextBtn.disabled = true;
 }
 
-function goNext() {
-  if (index < MC.length - 1) {
-    index++;
-    renderQuestion();
-    updateTopBar();
-  } else {
-    showResult();
-  }
+/** ---------- Helpers ---------- */
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-function restart() {
-  index = 0;
-  selectedIndexByQ = {};
-  lockedByQ = {};
-  score = 0;
-  renderQuestion();
-  updateTopBar();
-}
-
-prevBtn.addEventListener("click", goPrev);
-nextBtn.addEventListener("click", () => {
-  if (index === MC.length - 1 && lockedByQ[index]) {
-    showResult();
-    return;
+/** ---------- Events ---------- */
+prevBtn.addEventListener("click", () => {
+  if (pos > 0) {
+    pos--;
+    render();
   }
-  goNext();
 });
-restartBtn.addEventListener("click", restart);
 
-// init
-updateTopBar();
-renderQuestion();
+nextBtn.addEventListener("click", () => {
+  if (!activeIds.length) return;
+
+  if (pos < activeIds.length - 1) {
+    pos++;
+    render();
+  } else {
+    showFinal();
+  }
+});
+
+restartBtn.addEventListener("click", () => {
+  startSession(mode); // restart same mode
+});
+
+btnFull.addEventListener("click", () => startSession(MODE.FULL));
+btnRandom20.addEventListener("click", () => startSession(MODE.RAND20));
+btnWrongOnly.addEventListener("click", () => startSession(MODE.WRONG));
+
+btnClearWrong.addEventListener("click", () => {
+  wrongSet = new Set();
+  saveWrongSet(wrongSet);
+  setModeTag();
+  // if currently wrong-only, refresh list
+  if (mode === MODE.WRONG) startSession(MODE.WRONG);
+  else render();
+});
+
+/** ---------- Init ---------- */
+if (!BANK.length) {
+  questionEl.textContent = "No questions found. Make sure questions.js defines const QUESTIONS = [...]";
+  choicesEl.innerHTML = "";
+  prevBtn.disabled = true;
+  nextBtn.disabled = true;
+  restartBtn.style.display = "inline-block";
+} else {
+  startSession(MODE.FULL);
+}
