@@ -8,8 +8,7 @@
   <style>
     :root{
       --bg:#0b1220; --card:#111a2e; --text:#eef2ff; --muted:#aab3cf;
-      --border: rgba(255,255,255,.12); --good:#2bd576; --bad:#ff5a7a;
-      --btn:#1b2a4a; --btn2:#17233c;
+      --border: rgba(255,255,255,.12); --btn:#1b2a4a; --btn2:#17233c;
     }
     *{box-sizing:border-box}
     body{
@@ -23,20 +22,14 @@
     .muted{color:var(--muted);font-size:14px}
     .btn{
       padding:10px 14px;border-radius:12px;border:1px solid var(--border);
-      background:var(--btn);color:var(--text);cursor:pointer;
-      font-size:14px;
+      background:var(--btn);color:var(--text);cursor:pointer;font-size:14px;
     }
     .btn.secondary{background:var(--btn2)}
     .btn.danger{background: rgba(255,90,122,.2); border-color: rgba(255,90,122,.45)}
-    .btn:disabled{opacity:.45;cursor:not-allowed}
     .tag{
-      display:inline-block;
-      padding:4px 10px;
-      border:1px solid var(--border);
-      border-radius:999px;
-      background: rgba(255,255,255,.04);
-      font-size:13px;
-      color: var(--muted);
+      display:inline-block;padding:4px 10px;border:1px solid var(--border);
+      border-radius:999px;background: rgba(255,255,255,.04);
+      font-size:13px;color: var(--muted);
     }
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .card{
@@ -45,19 +38,11 @@
       padding:18px; box-shadow:0 18px 60px rgba(0,0,0,.35);
     }
     .topbar{display:flex;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap}
-    .q{
-      margin:12px 0 10px;
-      font-size:22px;
-      line-height:1.3;
-    }
+    .q{margin:12px 0 10px;font-size:22px;line-height:1.3}
     .q .zh{margin-top:6px}
     .panel{
-      margin-top:12px;
-      padding:12px;
-      border-radius:14px;
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.04);
-      line-height:1.55;
+      margin-top:12px;padding:12px;border-radius:14px;border:1px solid var(--border);
+      background: rgba(255,255,255,.04);line-height:1.55;
     }
     .controls{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
     ol{margin:8px 0 0; padding-left:18px}
@@ -94,12 +79,15 @@
           <span id="starTag" class="tag" style="display:none;">★ 65/20</span>
         </div>
         <div class="row">
-          <button id="toggleAnswerBtn" class="btn">Show Answer</button>
+          <!-- 关键：直接用 onclick 调全局函数，iPad Safari 不会失效 -->
+          <button id="toggleAnswerBtn" class="btn"
+                  onclick="window.__toggleAnswer && window.__toggleAnswer()">
+            Show Answer
+          </button>
         </div>
       </div>
 
       <div id="question" class="q">Loading…</div>
-
       <div id="answerPanel" class="panel" style="display:none;"></div>
 
       <div class="controls">
@@ -117,7 +105,7 @@
     </p>
   </div>
 
-  <!-- 强制卸载旧 Service Worker（避免老缓存） -->
+  <!-- 卸载旧 SW（防止旧缓存） -->
   <script>
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.getRegistrations()
@@ -126,9 +114,10 @@
     }
   </script>
 
-  <!-- 加版本号，强制拉新文件 -->
-  <script src="./questions.js?v=study20260112a"></script>
-  <script src="./app.js?v=study20260112a"></script>
+  <!-- 版本号改成 b：强制拉新 -->
+  <script src="./questions.js?v=study20260112b"></script>
+  <script src="./app.js?v=study20260112b"></script>
 </body>
 </html>
+
 
