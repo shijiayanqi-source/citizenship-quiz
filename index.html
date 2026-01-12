@@ -115,7 +115,18 @@
   </div>
 
   <!-- 保持你现在的 questions.js（128题那份） -->
-  <script src="./questions.js"></script>
-  <script src="./app.js"></script>
+  <!-- 先强制卸载旧的 Service Worker（如果以前装过，会一直用旧缓存） -->
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations()
+      .then(regs => Promise.all(regs.map(r => r.unregister())))
+      .catch(()=>{});
+  }
+</script>
+
+<!-- 加版本号，强制浏览器拉最新文件（不走旧缓存） -->
+<script src="./questions.js?v=20260112a"></script>
+<script src="./app.js?v=20260112a"></script>
 </body>
 </html>
+
