@@ -1,235 +1,109 @@
-window.__APP_LOADED = true;
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>US Citizenship Quiz</title>
 
-const $ = (id) => document.getElementById(id);
+  <style>
+    :root{
+      --bg:#0b1220; --card:#111a2e; --text:#eef2ff; --muted:#aab3cf;
+      --border: rgba(255,255,255,.12); --good:#2bd576; --bad:#ff5a7a;
+      --btn:#1b2a4a; --btn2:#17233c;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background: radial-gradient(1200px 700px at 20% 10%, #1b2a55 0%, var(--bg) 55%);
+      color:var(--text);
+    }
+    .app{max-width:900px;margin:0 auto;padding:28px 16px 40px}
+    .header h1{margin:0 0 6px;font-size:32px}
+    .muted{color:var(--muted);font-size:14px}
+    .card{
+      margin-top:18px;background: rgba(17, 26, 46, .92);
+      border:1px solid var(--border); border-radius:18px;
+      padding:18px; box-shadow:0 18px 60px rgba(0,0,0,.35);
+    }
+    .topbar{display:flex;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .question{margin:12px 0 12px;font-size:22px;line-height:1.25}
+    .choices{display:grid;gap:10px;margin:10px 0 14px}
+    .choice{
+      width:100%; text-align:left; padding:12px 12px;
+      background: rgba(27, 42, 74, .55);
+      border:1px solid var(--border); border-radius:14px;
+      color:var(--text); cursor:pointer;
+    }
+    .choice:hover{background: rgba(27, 42, 74, .8)}
+    .choice:disabled{cursor:default;opacity:.92}
+    .choice.correct{border-color: rgba(43, 213, 118, .7); background: rgba(43, 213, 118, .15)}
+    .choice.wrong{border-color: rgba(255, 90, 122, .7); background: rgba(255, 90, 122, .14)}
+    .controls{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
+    .btn{
+      padding:10px 14px;border-radius:12px;border:1px solid var(--border);
+      background:var(--btn);color:var(--text);cursor:pointer;
+    }
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .btn.secondary{background:var(--btn2)}
+    .btn.danger{background: rgba(255,90,122,.2); border-color: rgba(255,90,122,.45)}
+    .result{
+      margin-top:14px;padding:12px;border-radius:14px;border:1px solid var(--border);
+      background: rgba(255,255,255,.04);line-height:1.5
+    }
+  </style>
+</head>
 
-const questionEl = $("question");
-const choicesEl = $("choices"); // 我们用它来放“答案列表”
-const progressTextEl = $("progressText");
-const scoreTextEl = $("scoreText");
-const prevBtn = $("prevBtn");
-const nextBtn = $("nextBtn");
-const restartBtn = $("restartBtn");
-const resultEl = $("result");
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>US Citizenship Quiz</h1>
+      <p class="muted">128 Questions • Multiple choice practice</p>
+    </header>
 
-const speakBtn = $("speakBtn");
-const stopSpeakBtn = $("stopSpeakBtn");
-const rateSelect = $("rateSelect");
+    <!-- Intro -->
+    <main class="card" id="intro">
+      <h2 style="margin:0 0 8px;">Practice Mode</h2>
+      <p class="muted" style="margin:0 0 14px;">
+        Click “Start Practice” to begin. Each question locks after you choose an answer.
+      </p>
+      <button id="startBtn" class="btn">Start Practice</button>
+    </main>
 
-const questionsRaw = Array.isArray(window.QUESTIONS) ? window.QUESTIONS : [];
-
-let index = 0;
-let revealedByQ = {};      // 是否已显示答案
-let markedByQ = {};        // 1=correct, 0=wrong
-let score = 0;
-
-// ---------- TTS ----------
-let cachedVoice = null;
-
-function pickEnglishVoice() {
-  const voices = window.speechSynthesis?.getVoices?.() || [];
-  return (
-    voices.find(v => /en-US/i.test(v.lang)) ||
-    voices.find(v => /^en/i.test(v.lang)) ||
-    null
-  );
-}
-
-function ensureVoicesReady() {
-  if (!("speechSynthesis" in window)) return;
-  cachedVoice = pickEnglishVoice();
-  if (!cachedVoice) {
-    window.speechSynthesis.onvoiceschanged = () => {
-      cachedVoice = pickEnglishVoice();
-    };
-  }
-}
-
-function stopSpeaking() {
-  if (!("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-}
-
-function speakText(text) {
-  if (!("speechSynthesis" in window)) {
-    alert("Your browser does not support text-to-speech. Try Chrome/Edge.");
-    return;
-  }
-  stopSpeaking();
-
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = "en-US";
-  const rate = Number(rateSelect?.value || 1);
-  utter.rate = isNaN(rate) ? 1 : rate;
-
-  const v = cachedVoice || pickEnglishVoice();
-  if (v) utter.voice = v;
-
-  window.speechSynthesis.speak(utter);
-}
-
-// ---------- Data normalize ----------
-function normalize(item) {
-  // 你现在的结构： { en, answers_en: [...] }
-  // 兼容：如果有人用 { q, a } 也能跑
-  const q = item.en ?? item.q ?? "";
-  const answers = Array.isArray(item.answers_en) ? item.answers_en
-                : (item.a ? [item.a] : []);
-  const star = !!item.star;
-  return { q, answers, star };
-}
-
-const questions = questionsRaw.map(normalize);
-
-// ---------- Quiz logic ----------
-function computeScore() {
-  let s = 0;
-  Object.keys(markedByQ).forEach((k) => {
-    if (markedByQ[k] === 1) s++;
-  });
-  return s;
-}
-
-function updateTopBar() {
-  progressTextEl.textContent = `Question ${index + 1} of ${questions.length || 0}`;
-  scoreTextEl.textContent = `Score: ${score}`;
-}
-
-function render() {
-  if (!questions.length) {
-    questionEl.textContent = "❌ No questions found. Check questions.js and make sure it ends with: window.QUESTIONS = QUESTIONS;";
-    choicesEl.innerHTML = "";
-    prevBtn.disabled = true;
-    nextBtn.disabled = true;
-    return;
-  }
-
-  const q = questions[index];
-  questionEl.textContent = q.star ? `★ ${q.q}` : q.q;
-
-  const revealed = !!revealedByQ[index];
-  const marked = markedByQ[index]; // 1/0/undefined
-
-  // controls
-  prevBtn.disabled = (index === 0);
-  nextBtn.disabled = (marked === undefined) || (index >= questions.length - 1);
-  restartBtn.style.display = "none";
-  resultEl.style.display = "none";
-
-  // answer area (reuse choicesEl)
-  if (!revealed) {
-    choicesEl.innerHTML = `
-      <div class="result" style="display:block;">
-        <button id="revealBtn" class="btn">Reveal Answer</button>
-        <div class="muted" style="margin-top:10px;">After revealing, mark yourself correct or wrong to unlock Next.</div>
+    <!-- Quiz -->
+    <main class="card" id="quiz" style="display:none;">
+      <div class="topbar">
+        <div id="progressText" class="muted">Question 1 of 128</div>
+        <div id="scoreText" class="muted">Score: 0</div>
       </div>
-    `;
-    const revealBtn = document.getElementById("revealBtn");
-    revealBtn.addEventListener("click", () => {
-      revealedByQ[index] = true;
-      render();
-    });
-    return;
-  }
 
-  // revealed answers
-  const answersHtml = q.answers.length
-    ? `<ol style="margin:10px 0 0; padding-left:18px;">
-         ${q.answers.map(a => `<li style="margin:6px 0;">${a}</li>`).join("")}
-       </ol>`
-    : `<div class="muted" style="margin-top:10px;">(No answer listed.)</div>`;
+      <h2 id="question" class="question">Loading…</h2>
+      <div id="choices" class="choices"></div>
 
-  const correctActive = marked === 1 ? " style='outline:2px solid rgba(43,213,118,.6)'" : "";
-  const wrongActive = marked === 0 ? " style='outline:2px solid rgba(255,90,122,.6)'" : "";
-
-  choicesEl.innerHTML = `
-    <div class="result" style="display:block;">
-      <div class="muted">Acceptable answers:</div>
-      ${answersHtml}
-      <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px;">
-        <button id="speakAnswerBtn" class="btn secondary">🔊 Speak Answer</button>
-        <button id="markCorrectBtn" class="btn"${correctActive}>I was correct ✅</button>
-        <button id="markWrongBtn" class="btn secondary"${wrongActive}>I was wrong ❌</button>
+      <div class="controls">
+        <button id="prevBtn" class="btn secondary" disabled>Prev</button>
+        <button id="nextBtn" class="btn secondary" disabled>Next</button>
+        <button id="restartBtn" class="btn danger" style="display:none;">Restart</button>
       </div>
-    </div>
-  `;
 
-  document.getElementById("speakAnswerBtn").addEventListener("click", () => {
-    const text = q.answers.length ? q.answers.join(". ") : "No answer listed.";
-    speakText(text);
-  });
+      <div id="result" class="result" style="display:none;"></div>
+    </main>
 
-  document.getElementById("markCorrectBtn").addEventListener("click", () => {
-    markedByQ[index] = 1;
-    score = computeScore();
-    render();
-    updateTopBar();
-  });
+    <p class="muted" style="text-align:center;margin-top:14px;">
+      Tip: If you updated files and nothing changes, do Ctrl + F5 (force refresh).
+    </p>
+  </div>
 
-  document.getElementById("markWrongBtn").addEventListener("click", () => {
-    markedByQ[index] = 0;
-    score = computeScore();
-    render();
-    updateTopBar();
-  });
-}
+  <script src="./questions.js"></script>
+  <script src="./app.js"></script>
 
-function showResult() {
-  const finalScore = computeScore();
-  score = finalScore;
-
-  resultEl.style.display = "block";
-  resultEl.innerHTML = `
-    <strong>Finished!</strong><br/>
-    Correct: <strong>${finalScore}</strong> / <strong>${questions.length}</strong><br/>
-    Accuracy: <strong>${Math.round((finalScore / questions.length) * 100)}%</strong>
-  `;
-
-  restartBtn.style.display = "inline-block";
-  nextBtn.disabled = true;
-}
-
-function goPrev() {
-  stopSpeaking();
-  if (index > 0) {
-    index--;
-    render();
-    updateTopBar();
-  }
-}
-
-function goNext() {
-  stopSpeaking();
-  if (index < questions.length - 1) {
-    index++;
-    render();
-    updateTopBar();
-  } else {
-    showResult();
-  }
-}
-
-function restart() {
-  stopSpeaking();
-  index = 0;
-  revealedByQ = {};
-  markedByQ = {};
-  score = 0;
-  render();
-  updateTopBar();
-}
-
-// Buttons
-prevBtn.addEventListener("click", goPrev);
-nextBtn.addEventListener("click", goNext);
-restartBtn.addEventListener("click", restart);
-
-speakBtn.addEventListener("click", () => {
-  if (!questions.length) return;
-  speakText(questions[index].q);
-});
-stopSpeakBtn.addEventListener("click", stopSpeaking);
-
-// Init
-ensureVoicesReady();
-updateTopBar();
-render();
+  <script>
+    // Optional: service worker
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
+  
